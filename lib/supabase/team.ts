@@ -89,7 +89,7 @@ export function memberForUser(rows: TeamRow[], user: User): TeamRow | null {
 export async function loadUsage(supabase: SupabaseClient, memberId: string, timeZone: string): Promise<UsageView> {
   const { data, error } = await supabase
     .from('clicks')
-    .select('clicked_at, contact_id, contacts!clicks_contact_id_fkey(full_name, role, company)')
+    .select('clicked_at, contact_id, contacts!clicks_contact_id_fkey(full_name, role, company, linkedin_url)')
     .eq('team_member_id', memberId)
     .order('clicked_at', { ascending: false })
 
@@ -105,6 +105,7 @@ export async function loadUsage(supabase: SupabaseClient, memberId: string, time
       contactName: (contact?.full_name ?? '').replace(/\s+/g, ' ').trim(),
       role: (contact?.role ?? '').replace(/\s+/g, ' ').trim(),
       company: (contact?.company ?? '').replace(/\s+/g, ' ').trim(),
+      linkedinUrl: normalizeLinkedInUrl(contact?.linkedin_url ?? '') ?? '',
       clickedAt: row.clicked_at,
     })
   }

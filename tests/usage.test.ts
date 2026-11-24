@@ -10,6 +10,7 @@ const clicks = [
         contactName: 'Eleni Nikoloudaki',
         role: 'Head of HW',
         company: 'Brusa HyPower',
+        linkedinUrl: 'https://www.linkedin.com/in/eleni',
     clickedAt: '2026-11-24T18:30:00Z',
   },
   {
@@ -41,6 +42,7 @@ describe('own openings', () => {
     expect(openings.map((item) => item.contactName)).toEqual(['Eleni Nikoloudaki', 'Roland Fromherz'])
     expect(openings[0]?.whenLabel).toContain('24')
     expect(openings[0]?.company).toBe('Brusa HyPower')
+    expect(openings[0]?.linkedinUrl).toBe('https://www.linkedin.com/in/eleni')
   })
 
   it('does not count the same live opening twice', () => {
@@ -52,6 +54,7 @@ describe('own openings', () => {
         contactName: 'Eleni Nikoloudaki',
         role: 'Head',
         company: 'Brusa',
+        linkedinUrl: 'https://www.linkedin.com/in/eleni',
         clickedAt: '2026-11-24T18:30:02Z',
         whenLabel: '24 nov, 19:30',
       },
@@ -65,6 +68,7 @@ describe('own openings', () => {
         contactName: 'Eleni Nikoloudaki',
         role: 'Head',
         company: 'Brusa',
+        linkedinUrl: '',
         clickedAt: '2026-11-24T18:30:03Z',
         whenLabel: '24 nov, 19:30',
       },
@@ -73,6 +77,7 @@ describe('own openings', () => {
     )
     expect(merged.recent).toHaveLength(1)
     expect(merged.counts).toEqual({ today: 1, week: 1, total: 1 })
+    expect(merged.recent[0]?.linkedinUrl).toBe('https://www.linkedin.com/in/eleni')
   })
 })
 

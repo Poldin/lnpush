@@ -6,6 +6,7 @@ export type UsageClick = {
   contactName: string
   role: string
   company: string
+  linkedinUrl?: string
   clickedAt: string
 }
 
@@ -20,6 +21,7 @@ export type OwnOpening = {
   contactName: string
   role: string
   company: string
+  linkedinUrl: string
   whenLabel: string
   clickedAt: string
 }
@@ -72,16 +74,22 @@ export function applyOpening(
 
 export function mergeOpening(current: OwnOpening[], next: OwnOpening): OwnOpening[] {
   const nextTime = Date.parse(next.clickedAt)
+  const previous = current.find((item) => {
+    if (item.contactId !== next.contactId) return false
+    const gap = Math.abs(Date.parse(item.clickedAt) - nextTime)
+    return !Number.isNaN(gap) && gap <= 20000
+  })
+  const merged = next.linkedinUrl ? next : { ...next, linkedinUrl: previous?.linkedinUrl ?? '' }
   const withoutNearDuplicate = current.filter((item) => {
     if (item.contactId !== next.contactId) return true
     const gap = Math.abs(Date.parse(item.clickedAt) - nextTime)
     return Number.isNaN(gap) || gap > 20000
   })
-  return [next, ...withoutNearDuplicate].sort((left, right) => right.clickedAt.localeCompare(left.clickedAt))
+  return [merged, ...withoutNearDuplicate].sort((left, right) => right.clickedAt.localeCompare(left.clickedAt))
 }
 
 export function toOpening(
-  click: Pick<UsageClick, 'contactId' | 'contactName' | 'role' | 'company' | 'clickedAt'>,
+  click: Pick<UsageClick, 'contactId' | 'contactName' | 'role' | 'company' | 'clickedAt'> & { linkedinUrl?: string },
   timeZone: string,
 ): OwnOpening {
   return {
@@ -89,6 +97,7 @@ export function toOpening(
     contactName: click.contactName || 'Profilo',
     role: click.role,
     company: click.company,
+    linkedinUrl: click.linkedinUrl ?? '',
     clickedAt: click.clickedAt,
     whenLabel: formatRomeDateTime(click.clickedAt, timeZone),
   }
