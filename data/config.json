@@ -5,7 +5,7 @@
   "maxMembersPerContact": 3,
   "startDate": "2026-11-24",
   "timezone": "Europe/Rome",
-  "affinityEnabled": true,
+  "affinityEnabled": false,
   "technicalGroupPattern": "tecnic",
   "followGroupPattern": "^decisore"
 }

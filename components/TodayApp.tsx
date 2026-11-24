@@ -3,38 +3,29 @@
 import { useEffect, useState } from 'react'
 
 import { todayIso } from '../lib/dates'
-import type { CardView, Plan } from '../lib/types'
+import { createBrowserSupabase } from '../lib/supabase/browser'
+import type { CardView, HomeView } from '../lib/types'
 
-const STORAGE_KEY = 'newtwen-oggi-member'
 // Same-tab on phones so the OS can hand https://www.linkedin.com/in/... to the LinkedIn app.
-// A new tab breaks that handoff. Wide screens with a mouse keep the list open in this tab's sibling.
 const DESKTOP_LINK = '(min-width: 900px) and (pointer: fine)'
 
-export function TodayApp({ plan, gateEnabled }: { plan: Plan; gateEnabled: boolean }) {
-  const [ready, setReady] = useState(false)
-  const [memberId, setMemberId] = useState<string | null>(null)
+export function TodayApp({ view }: { view: HomeView }) {
   const [newTab, setNewTab] = useState(false)
+  const [opened, setOpened] = useState<Set<string>>(new Set())
+  const [passkey, setPasskey] = useState<'hidden' | 'offer' | 'ready' | 'done'>('hidden')
+  const [passkeyMessage, setPasskeyMessage] = useState('')
 
   useEffect(() => {
     const media = window.matchMedia(DESKTOP_LINK)
     const applyTab = () => setNewTab(media.matches)
     applyTab()
     media.addEventListener('change', applyTab)
-
-    const saved = window.localStorage.getItem(STORAGE_KEY)
-    if (saved && plan.members.some((member) => member.id === saved)) {
-      setMemberId(saved)
-    } else if (plan.members.length === 1) {
-      setMemberId(plan.members[0]?.id ?? null)
-    }
-    setReady(true)
-
     return () => media.removeEventListener('change', applyTab)
-  }, [plan.members])
+  }, [])
 
   useEffect(() => {
     const checkDay = () => {
-      if (todayIso(plan.timezone) !== plan.isoDate) window.location.reload()
+      if (todayIso(view.timezone) !== view.isoDate) window.location.reload()
     }
     const id = window.setInterval(checkDay, 60000)
     document.addEventListener('visibilitychange', checkDay)
@@ -42,90 +33,102 @@ export function TodayApp({ plan, gateEnabled }: { plan: Plan; gateEnabled: boole
       window.clearInterval(id)
       document.removeEventListener('visibilitychange', checkDay)
     }
-  }, [plan.isoDate, plan.timezone])
+  }, [view.isoDate, view.timezone])
 
-  function choose(id: string) {
-    window.localStorage.setItem(STORAGE_KEY, id)
-    setMemberId(id)
+  useEffect(() => {
+    if (window.sessionStorage.getItem('lnpush-passkey-later') === '1') return
+    let cancel = false
+    const supabase = createBrowserSupabase()
+    void supabase.auth.passkey.list().then(({ data, error }) => {
+      if (cancel) return
+      if (error) {
+        setPasskey('offer')
+        return
+      }
+      setPasskey(data && data.length > 0 ? 'ready' : 'offer')
+    })
+    return () => {
+      cancel = true
+    }
+  }, [])
+
+  async function registerPasskey() {
+    setPasskeyMessage('')
+    const supabase = createBrowserSupabase()
+    const { error } = await supabase.auth.registerPasskey()
+    if (!error) {
+      setPasskey('done')
+      return
+    }
+    const code = 'code' in error ? String(error.code) : ''
+    setPasskeyMessage(
+      code === 'passkey_disabled'
+        ? 'I passkey non sono ancora attivi sul progetto Supabase.'
+        : 'Registrazione annullata o non riuscita.',
+    )
   }
 
-  function changePerson() {
-    window.localStorage.removeItem(STORAGE_KEY)
-    setMemberId(null)
+  function later() {
+    window.sessionStorage.setItem('lnpush-passkey-later', '1')
+    setPasskey('hidden')
   }
-
-  async function logout() {
-    await fetch('/api/logout', { method: 'POST' })
-    window.location.href = '/login'
-  }
-
-  const member = plan.members.find((item) => item.id === memberId) ?? null
-  const cards = member ? (plan.cardsByMember[member.id] ?? []) : []
 
   return (
     <main className="wrap">
       <a className="skip" href="#lista">
         Vai alla lista
       </a>
+      <div className="toolbar">
+        <p className="hello">
+          Ciao <strong>{view.memberName}</strong>
+        </p>
+        <form action="/api/logout" method="post">
+          <button className="linkish" type="submit">
+            Esci
+          </button>
+        </form>
+      </div>
 
-      {ready && (member || gateEnabled) ? (
-        <div className="toolbar">
-          {member ? (
-            <p className="hello">
-              Ciao <strong>{member.name}</strong>
-            </p>
-          ) : null}
-          <div className="toolbar-actions">
-            {member && plan.members.length > 1 ? (
-              <button className="ghost" type="button" onClick={changePerson}>
-                Cambia
-              </button>
-            ) : null}
-            {gateEnabled ? (
-              <button className="ghost" type="button" onClick={logout}>
-                Esci
-              </button>
-            ) : null}
-          </div>
-        </div>
+      {passkey === 'offer' ? (
+        <section className="card passkey">
+          <h2 className="name">Questo telefono</h2>
+          <p className="role">Registra l’impronta, il volto o il PIN. I prossimi accessi non chiedono l’email.</p>
+          <button className="primary" type="button" onClick={registerPasskey}>
+            Registra il dispositivo
+          </button>
+          <button className="linkish" type="button" onClick={later}>
+            Più tardi
+          </button>
+          {passkeyMessage ? <p className="status">{passkeyMessage}</p> : null}
+        </section>
       ) : null}
+      {passkey === 'done' ? <p className="status">Dispositivo registrato.</p> : null}
 
-      {!ready ? <p className="status">Caricamento…</p> : null}
-
-      {ready && plan.members.length === 0 ? (
+      {view.beforeStart ? (
         <section className="card" id="lista">
-          <h2 className="name">Manca il team</h2>
-          <p className="role">Aggiungi le persone in data/team.json.</p>
+          <h2 className="name">Il piano parte il {view.startLabel}</h2>
+          <p className="role">Oggi non ci sono profili da aprire.</p>
         </section>
       ) : null}
 
-      {ready && !member && plan.members.length > 0 ? (
-        <section id="lista">
-          <h1 className="screen-title">Chi sei?</h1>
-          <p className="lede">Tocca il tuo nome. Resta memorizzato su questo telefono.</p>
-          <div className="names">
-            {plan.members.map((item) => (
-              <button key={item.id} className="choice" type="button" onClick={() => choose(item.id)}>
-                <span>{item.name}</span>
-                <span className="chev" aria-hidden="true">
-                  ›
-                </span>
-              </button>
-            ))}
-          </div>
+      {!view.beforeStart && view.cards.length === 0 ? (
+        <section className="card" id="lista">
+          <h2 className="name">Oggi la lista è vuota</h2>
+          <p className="role">
+            I profili già aperti o già usciti restano in pausa {view.cooldownDays} giorni e possono andare al massimo a{' '}
+            {view.maxMembersPerContact} persone del team.
+          </p>
         </section>
       ) : null}
 
-      {ready && member && cards.length === 0 ? <EmptyState plan={plan} /> : null}
-
-      {ready && member && cards.length > 0 ? (
+      {!view.beforeStart && view.cards.length > 0 ? (
         <section id="lista" aria-labelledby="lista-title">
           <h1 className="list-title" id="lista-title">
-            {profileCount(cards.length)}
+            {profileCount(view.cards.length)}
           </h1>
           <div className="cards">
-            {cards.map((card) => (
-              <article className="card" key={card.id}>
+            {view.cards.map((card) => (
+              <article className={opened.has(card.id) ? 'card opened' : 'card'} key={card.id}>
                 {card.company ? (
                   <p className="company">
                     <BuildingIcon />
@@ -134,8 +137,29 @@ export function TodayApp({ plan, gateEnabled }: { plan: Plan; gateEnabled: boole
                 ) : null}
                 <h3 className="name">{card.name}</h3>
                 {card.role ? <p className="role">{card.role}</p> : null}
+                {opened.has(card.id) ? <p className="opened-label">Aperto</p> : null}
                 <div className="card-action">
-                  <ProfileLink card={card} newTab={newTab} />
+                  <ProfileLink
+                    card={card}
+                    newTab={newTab}
+                    onOpen={() => {
+                      setOpened((current) => {
+                        const next = new Set(current)
+                        next.add(card.id)
+                        return next
+                      })
+                      const body = new Blob([JSON.stringify({ contactId: card.id })], { type: 'application/json' })
+                      const sent = navigator.sendBeacon?.('/api/clicks', body) ?? false
+                      if (!sent) {
+                        void fetch('/api/clicks', {
+                          method: 'POST',
+                          body: JSON.stringify({ contactId: card.id }),
+                          headers: { 'content-type': 'application/json' },
+                          keepalive: true,
+                        })
+                      }
+                    }}
+                  />
                 </div>
               </article>
             ))}
@@ -146,28 +170,7 @@ export function TodayApp({ plan, gateEnabled }: { plan: Plan; gateEnabled: boole
   )
 }
 
-function EmptyState({ plan }: { plan: Plan }) {
-  if (plan.beforeStart) {
-    return (
-      <section className="card" id="lista">
-        <h2 className="name">Il piano parte il {plan.startLabel}</h2>
-        <p className="role">Oggi non ci sono profili da aprire.</p>
-      </section>
-    )
-  }
-  return (
-    <section className="card" id="lista">
-      <h2 className="name">Oggi la lista è vuota</h2>
-      <p className="role">
-        I profili già usciti restano in pausa {plan.cooldownDays} giorni e possono andare al massimo a{' '}
-        {plan.maxMembersPerContact} persone del team. Per i prossimi giorni servono altri contatti con un profilo
-        LinkedIn.
-      </p>
-    </section>
-  )
-}
-
-function ProfileLink({ card, newTab }: { card: CardView; newTab: boolean }) {
+function ProfileLink({ card, newTab, onOpen }: { card: CardView; newTab: boolean; onOpen: () => void }) {
   const company = card.company ? `, ${card.company}` : ''
   return (
     <a
@@ -177,6 +180,7 @@ function ProfileLink({ card, newTab }: { card: CardView; newTab: boolean }) {
       rel="noopener noreferrer"
       referrerPolicy="no-referrer"
       aria-label={`Apri il profilo LinkedIn di ${card.name}${company}`}
+      onClick={onOpen}
     >
       <OpenMark />
       <span className="btn-label">Apri su LinkedIn</span>
