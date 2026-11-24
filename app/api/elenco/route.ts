@@ -24,7 +24,10 @@ export async function GET() {
     )
     const openedContactIds = [...new Set(roster.clicks.map((click) => click.contactId))]
     const contactLabels = Object.fromEntries(
-      roster.contacts.map((contact) => [contact.id, { name: contact.name, role: contact.role, company: contact.company }]),
+      roster.contacts.map((contact) => [
+        contact.id,
+        { name: contact.name, role: contact.role, company: contact.company, linkedinUrl: contact.linkedinUrl },
+      ]),
     )
     const view = homeForMember(plan, member.id, openedContactIds, contactLabels)
     const companies = [...new Set(roster.contacts.map((contact) => contact.company).filter(Boolean))].sort((left, right) =>

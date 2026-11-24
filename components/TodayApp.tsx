@@ -1,15 +1,25 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type TouchEvent } from 'react'
 import { useRouter } from 'next/navigation'
 
+import {
+  companyFilterLabel,
+  companyFilterParams,
+  companyIsSelected,
+  readCompanyFilter,
+  selectAllState,
+  toggleCompanyInFilter,
+  toggleVisibleInFilter,
+  type CompanyFilter,
+} from '../lib/companies'
 import { todayIso } from '../lib/dates'
 import { createBrowserSupabase } from '../lib/supabase/browser'
+import { nextTabFromSwipe } from '../lib/swipe'
 import type { AppTab } from '../lib/tabs'
 import { applyOpening, toOpening } from '../lib/usage'
 import type { CardView, ContactLabel, HomeView, UsageCounts, UsageView } from '../lib/types'
 
-// Same-tab on phones so the OS can hand https://www.linkedin.com/in/... to the LinkedIn app.
 export function TodayApp({
   memberId,
   memberName,
@@ -26,10 +36,12 @@ export function TodayApp({
   initialCompanies: string[]
 }) {
   const router = useRouter()
+  const initialFilter = readCompanyFilter(initialCompanies)
   const [tab, setTab] = useState<AppTab>(initialTab)
-  const [companies, setCompanies] = useState<string[]>(initialCompanies)
+  const [companyFilter, setCompanyFilter] = useState<CompanyFilter>(initialFilter)
   const [companyQuery, setCompanyQuery] = useState('')
   const [filterOpen, setFilterOpen] = useState(false)
+  const swipeStart = useRef<{ x: number; y: number } | null>(null)
   const [shownCount, setShownCount] = useState(20)
   const [usageShown, setUsageShown] = useState(10)
   const [elenco, setElenco] = useState<HomeView | null>(null)
@@ -90,30 +102,41 @@ export function TodayApp({
     )
   }
 
-  function writeUrl(nextTab: AppTab, nextCompanies: string[]) {
+  function writeUrl(nextTab: AppTab, filter: CompanyFilter) {
     const params = new URLSearchParams()
     params.set('tab', nextTab)
-    for (const company of nextCompanies) params.append('aziende', company)
+    for (const company of companyFilterParams(filter)) params.append('aziende', company)
     router.replace(`/?${params.toString()}`, { scroll: false })
   }
 
   function selectTab(next: AppTab) {
     if (next === tab) return
     setTab(next)
-    writeUrl(next, companies)
+    writeUrl(next, companyFilter)
   }
 
-  function toggleCompany(company: string) {
-    const next = companies.includes(company) ? companies.filter((item) => item !== company) : [...companies, company]
-    setCompanies(next)
+  function commitFilter(next: CompanyFilter) {
+    setCompanyFilter(next)
     setShownCount(20)
     writeUrl(tab, next)
   }
 
-  function clearCompanies() {
-    setCompanies([])
-    setShownCount(20)
-    writeUrl(tab, [])
+  function onTouchStart(event: TouchEvent) {
+    if (filterOpen || event.touches.length !== 1) {
+      swipeStart.current = null
+      return
+    }
+    const touch = event.touches[0]
+    swipeStart.current = { x: touch.clientX, y: touch.clientY }
+  }
+
+  function onTouchEnd(event: TouchEvent) {
+    const start = swipeStart.current
+    swipeStart.current = null
+    const touch = event.changedTouches[0]
+    if (!start || !touch || filterOpen) return
+    const next = nextTabFromSwipe(tab, touch.clientX - start.x, touch.clientY - start.y, filterOpen)
+    if (next) selectTab(next)
   }
 
   useEffect(() => {
@@ -181,12 +204,14 @@ export function TodayApp({
   }
 
   function rememberOwnOpening(contactId: string, clickedAt: string, label?: ContactLabel) {
+    const known = labelsRef.current[contactId]
     const opening = toOpening(
       {
         contactId,
-        contactName: label?.name ?? labelsRef.current[contactId]?.name ?? 'Profilo',
-        role: label?.role ?? labelsRef.current[contactId]?.role ?? '',
-        company: label?.company ?? labelsRef.current[contactId]?.company ?? '',
+        contactName: label?.name ?? known?.name ?? 'Profilo',
+        role: label?.role ?? known?.role ?? '',
+        company: label?.company ?? known?.company ?? '',
+        linkedinUrl: label?.linkedinUrl || known?.linkedinUrl || '',
         clickedAt,
       },
       timezone,
@@ -199,7 +224,12 @@ export function TodayApp({
     armTimer.current = null
     setArmedId(null)
     hideContact(card.id)
-    rememberOwnOpening(card.id, new Date().toISOString(), { name: card.name, role: card.role, company: card.company })
+    rememberOwnOpening(card.id, new Date().toISOString(), {
+      name: card.name,
+      role: card.role,
+      company: card.company,
+      linkedinUrl: card.linkedinUrl,
+    })
     const body = new Blob([JSON.stringify({ contactId: card.id })], { type: 'application/json' })
     const sent = navigator.sendBeacon?.('/api/clicks', body) ?? false
     if (!sent) {
@@ -231,15 +261,20 @@ export function TodayApp({
   }, [memberId, timezone])
 
   const visibleCards = (elenco?.cards ?? []).filter((card) => !hiddenIds.has(card.id))
+  const allCompanies = elenco?.companies ?? []
   const filteredCards =
-    companies.length === 0 ? visibleCards : visibleCards.filter((card) => companies.includes(card.company))
+    companyFilter.mode === 'all'
+      ? visibleCards
+      : companyFilter.mode === 'none'
+        ? []
+        : visibleCards.filter((card) => companyFilter.picked.includes(card.company))
   const shownCards = filteredCards.slice(0, shownCount)
-  const companyChoices = (elenco?.companies ?? []).filter((company) =>
+  const companyChoices = allCompanies.filter((company) =>
     company.toLocaleLowerCase('it').includes(companyQuery.trim().toLocaleLowerCase('it')),
   )
 
   return (
-    <main className="wrap">
+    <main className="wrap" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} onTouchCancel={() => (swipeStart.current = null)}>
       <a className="skip" href="#lista">
         Vai alla lista
       </a>
@@ -323,12 +358,14 @@ export function TodayApp({
         <CompanyFilter
           open={filterOpen}
           query={companyQuery}
-          selected={companies}
+          filter={companyFilter}
+          allCompanies={allCompanies}
           choices={companyChoices}
           onToggleOpen={() => setFilterOpen((current) => !current)}
+          onClose={() => setFilterOpen(false)}
           onQuery={setCompanyQuery}
-          onToggle={toggleCompany}
-          onClear={clearCompanies}
+          onToggle={(company) => commitFilter(toggleCompanyInFilter(companyFilter, company, allCompanies))}
+          onToggleVisible={() => commitFilter(toggleVisibleInFilter(companyFilter, companyChoices, allCompanies))}
         />
       ) : null}
 
@@ -343,7 +380,7 @@ export function TodayApp({
         <section id="lista" aria-label="Elenco">
           <div className="cards">
             {shownCards.map((card) => (
-              <article className="card" key={card.id}>
+              <article className="card profile-card" key={card.id}>
                 <ProfileFacts name={card.name} role={card.role} company={card.company} />
                 <div className="card-action">
                   <ProfileLink
@@ -370,53 +407,108 @@ export function TodayApp({
 function CompanyFilter({
   open,
   query,
-  selected,
+  filter,
+  allCompanies,
   choices,
   onToggleOpen,
+  onClose,
   onQuery,
   onToggle,
-  onClear,
+  onToggleVisible,
 }: {
   open: boolean
   query: string
-  selected: string[]
+  filter: CompanyFilter
+  allCompanies: string[]
   choices: string[]
   onToggleOpen: () => void
+  onClose: () => void
   onQuery: (value: string) => void
   onToggle: (company: string) => void
-  onClear: () => void
+  onToggleVisible: () => void
 }) {
-  const label = selected.length === 0 ? 'Tutte le aziende' : selected.length === 1 ? selected[0] : `${selected.length} aziende`
+  const dialogRef = useRef<HTMLDialogElement>(null)
+  const allBox = useRef<HTMLInputElement>(null)
+  const ignoreClose = useRef(false)
+  const visibleState = selectAllState(filter, choices, allCompanies)
+
+  useEffect(() => {
+    const dialog = dialogRef.current
+    if (!dialog) return
+    if (open && !dialog.open) dialog.showModal()
+    if (!open && dialog.open) dialog.close()
+    return () => {
+      if (!dialog.open) return
+      ignoreClose.current = true
+      dialog.close()
+    }
+  }, [open])
+
+  useEffect(() => {
+    if (allBox.current) allBox.current.indeterminate = visibleState === 'pick'
+  }, [visibleState, open])
+
   return (
     <div className="filter">
-      <button className="filter-button" type="button" aria-expanded={open} onClick={onToggleOpen}>
-        <span>{label}</span>
+      <button
+        className="filter-button"
+        type="button"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-controls="scelta-aziende"
+        onClick={onToggleOpen}
+      >
+        <span>{companyFilterLabel(filter)}</span>
         <span aria-hidden="true">{open ? '–' : '+'}</span>
       </button>
-      {open ? (
-        <div className="filter-panel">
+      <dialog
+        id="scelta-aziende"
+        className="company-dialog"
+        ref={dialogRef}
+        tabIndex={-1}
+        aria-label="Aziende"
+        onClose={() => {
+          if (ignoreClose.current) {
+            ignoreClose.current = false
+            return
+          }
+          onClose()
+        }}
+        onClick={(event) => {
+          if (event.target === event.currentTarget) onClose()
+        }}
+      >
+        <input
+          className="filter-search"
+          type="search"
+          value={query}
+          placeholder="Cerca azienda"
+          aria-label="Cerca azienda"
+          onChange={(event) => onQuery(event.target.value)}
+        />
+        <label className="filter-option">
           <input
-            className="filter-search"
-            type="search"
-            value={query}
-            placeholder="Cerca azienda"
-            aria-label="Cerca azienda"
-            onChange={(event) => onQuery(event.target.value)}
+            ref={allBox}
+            type="checkbox"
+            checked={visibleState === 'all'}
+            onChange={onToggleVisible}
           />
-          <button className="linkish" type="button" onClick={onClear} disabled={selected.length === 0}>
-            Azzera
-          </button>
-          <div className="filter-list">
-            {choices.length === 0 ? <p className="role">Nessuna azienda trovata.</p> : null}
-            {choices.map((company) => (
-              <label className="filter-option" key={company}>
-                <input type="checkbox" checked={selected.includes(company)} onChange={() => onToggle(company)} />
-                <span>{company}</span>
-              </label>
-            ))}
-          </div>
+          <span>Seleziona tutte</span>
+        </label>
+        <div className="filter-list">
+          {choices.length === 0 ? <p className="role">Nessuna azienda trovata.</p> : null}
+          {choices.map((company) => (
+            <label className="filter-option" key={company}>
+              <input
+                type="checkbox"
+                checked={companyIsSelected(filter, company, allCompanies)}
+                onChange={() => onToggle(company)}
+              />
+              <span>{company}</span>
+            </label>
+          ))}
         </div>
-      ) : null}
+      </dialog>
     </div>
   )
 }
@@ -454,10 +546,34 @@ function ProfileLink({
         onConfirm()
       }}
     >
-      <span>{armed ? 'Tocca di nuovo' : 'Vedi su'}</span>
+      <SeeLinkFace label={armed ? 'Tocca di nuovo' : 'Vedi su'} />
+    </a>
+  )
+}
+
+function ReopenLink({ name, company, href }: { name: string; company: string; href: string }) {
+  const companyLabel = company ? `, ${company}` : ''
+  return (
+    <a
+      className="see-link"
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      referrerPolicy="no-referrer"
+      aria-label={`Vedi su LinkedIn il profilo di ${name}${companyLabel}`}
+    >
+      <SeeLinkFace label="Vedi su" />
+    </a>
+  )
+}
+
+function SeeLinkFace({ label }: { label: string }) {
+  return (
+    <span className="see-link-hit">
+      <span>{label}</span>
       <LinkedInMark />
       <span aria-hidden="true">↗</span>
-    </a>
+    </span>
   )
 }
 
@@ -484,30 +600,33 @@ function UsagePanel({
   }
   return (
     <section id="lista" aria-labelledby="utilizzo-title">
+      <dl className="stats stats-plain">
+        <div>
+          <dt>Oggi</dt>
+          <dd>{counts.today}</dd>
+        </div>
+        <div>
+          <dt>7 giorni</dt>
+          <dd>{counts.week}</dd>
+        </div>
+        <div>
+          <dt>Totale</dt>
+          <dd>{counts.total}</dd>
+        </div>
+      </dl>
       <h1 className="list-title" id="utilizzo-title">
         Le tue aperture
       </h1>
-      <article className="card">
-        <dl className="stats">
-          <div>
-            <dt>Oggi</dt>
-            <dd>{counts.today}</dd>
-          </div>
-          <div>
-            <dt>7 giorni</dt>
-            <dd>{counts.week}</dd>
-          </div>
-          <div>
-            <dt>Totale</dt>
-            <dd>{counts.total}</dd>
-          </div>
-        </dl>
-      </article>
       {recent.length === 0 ? <p className="role">Nessuna apertura ancora.</p> : null}
       <div className="cards">
         {recent.slice(0, shown).map((item) => (
-          <article className="card" key={`${item.contactId}-${item.clickedAt}`}>
+          <article className="card profile-card" key={`${item.contactId}-${item.clickedAt}`}>
             <ProfileFacts name={item.contactName} role={item.role} company={item.company} when={item.whenLabel} />
+            {item.linkedinUrl ? (
+              <div className="card-action">
+                <ReopenLink name={item.contactName} company={item.company} href={item.linkedinUrl} />
+              </div>
+            ) : null}
           </article>
         ))}
       </div>
@@ -577,20 +696,19 @@ function ElencoSkeleton() {
 function UsageSkeleton() {
   return (
     <div aria-hidden="true">
+      <div className="stats stats-plain">
+        <div className="skeleton skeleton-count" />
+        <div className="skeleton skeleton-count" />
+        <div className="skeleton skeleton-count" />
+      </div>
       <div className="skeleton skeleton-line title-line" />
-      <article className="card skeleton-card">
-        <div className="stats">
-          <div className="skeleton skeleton-count" />
-          <div className="skeleton skeleton-count" />
-          <div className="skeleton skeleton-count" />
-        </div>
-      </article>
       <div className="cards">
         {['a', 'b', 'c'].map((key) => (
           <article className="card skeleton-card" key={key}>
+            <div className="skeleton skeleton-line short" />
             <div className="skeleton skeleton-line name-line" />
             <div className="skeleton skeleton-line" />
-            <div className="skeleton skeleton-line short" />
+            <div className="skeleton skeleton-button" />
           </article>
         ))}
       </div>

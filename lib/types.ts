@@ -75,6 +75,7 @@ export type UsageRecentView = {
   contactName: string
   role: string
   company: string
+  linkedinUrl: string
   whenLabel: string
   clickedAt: string
 }
@@ -95,6 +96,7 @@ export type ContactLabel = {
   name: string
   role: string
   company: string
+  linkedinUrl?: string
 }
 
 export type HomeView = {
