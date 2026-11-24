@@ -1,10 +1,10 @@
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 
-import { clickIndex, planAssignments } from './assignment'
+import { clickIndex, planAssignments, queueForMember } from './assignment'
 import { assertPattern } from './classify'
 import { isIsoDate, splitItalianDate, todayIso } from './dates'
-import type { ContactLabel, Dataset, HomeView, Plan, PlanConfig } from './types'
+import type { CardView, ContactLabel, Dataset, HomeView, Plan, PlanConfig } from './types'
 
 const DEFAULTS = {
   cardsPerDay: 5,
@@ -65,6 +65,17 @@ export function buildTodayPlan(dataset: Dataset, isoDate = todayIso(dataset.conf
   }
 }
 
+export function queueCards(dataset: Dataset, memberId: string, isoDate: string): CardView[] {
+  const clicks = clickIndex(dataset.clicks ?? [])
+  return queueForMember(dataset.contacts, dataset.team, dataset.config, isoDate, memberId, clicks).map((contact) => ({
+    id: contact.id,
+    name: contact.name,
+    role: contact.role,
+    company: contact.company,
+    linkedinUrl: contact.linkedinUrl,
+  }))
+}
+
 export function homeForMember(
   plan: Plan,
   memberId: string,
@@ -79,6 +90,9 @@ export function homeForMember(
     memberId,
     memberName: member?.name ?? '',
     cards: (plan.cardsByMember[memberId] ?? []).filter((card) => !opened.has(card.id)),
+    companies: [...new Set((plan.cardsByMember[memberId] ?? []).map((card) => card.company).filter(Boolean))].sort((left, right) =>
+      left.localeCompare(right, 'it'),
+    ),
     openedContactIds,
     contactLabels,
     beforeStart: plan.beforeStart,

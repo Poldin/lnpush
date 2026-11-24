@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 
-import { buildTodayPlan, homeForMember, loadConfigFile } from '../../../lib/data'
+import { buildTodayPlan, homeForMember, loadConfigFile, queueCards } from '../../../lib/data'
 import { todayIso } from '../../../lib/dates'
 import { createServerSupabase } from '../../../lib/supabase/server'
 import { loadRoster, memberForUser } from '../../../lib/supabase/team'
@@ -24,9 +24,21 @@ export async function GET() {
     )
     const openedContactIds = [...new Set(roster.clicks.map((click) => click.contactId))]
     const contactLabels = Object.fromEntries(
-      roster.contacts.map((contact) => [contact.id, { name: contact.name, company: contact.company }]),
+      roster.contacts.map((contact) => [contact.id, { name: contact.name, role: contact.role, company: contact.company }]),
     )
-    return NextResponse.json(homeForMember(plan, member.id, openedContactIds, contactLabels))
+    const view = homeForMember(plan, member.id, openedContactIds, contactLabels)
+    const companies = [...new Set(roster.contacts.map((contact) => contact.company).filter(Boolean))].sort((left, right) =>
+      left.localeCompare(right, 'it'),
+    )
+    return NextResponse.json({
+      ...view,
+      cards: queueCards(
+        { contacts: roster.contacts, team: roster.team, config, clicks: roster.clicks },
+        member.id,
+        plan.isoDate,
+      ),
+      companies,
+    })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Elenco non disponibile.'
     return NextResponse.json({ error: message }, { status: 500 })

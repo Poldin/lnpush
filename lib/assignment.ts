@@ -1,4 +1,4 @@
-import { eachDate, daysBetween } from './dates'
+import { addDays, eachDate, daysBetween } from './dates'
 import { assignmentRank, memberOrderRank } from './hash'
 import type { Assignment, ClickIndex, Contact, PlanConfig, TeamMember } from './types'
 
@@ -26,14 +26,42 @@ export function planAssignments(
     return []
   }
 
-  const dates = eachDate(config.startDate, throughDate)
   const history = new Map<string, { lastDate: string; members: Set<string> }>()
   const assignments: Assignment[] = []
+  fillHistory(roster, people, config, throughDate, clicks, history, assignments)
+  return assignments
+}
 
-  for (const date of dates) {
+/** Every contact this person can still open today, in a stable order. Never-opened profiles come first. */
+export function queueForMember(
+  contacts: Contact[],
+  team: TeamMember[],
+  config: PlanConfig,
+  date: string,
+  memberId: string,
+  clicks: ClickIndex = emptyClicks(),
+): Contact[] {
+  const roster = uniqueContacts(contacts)
+  const people = uniqueMembers(team)
+  const history = new Map<string, { lastDate: string; members: Set<string> }>()
+  if (config.startDate < date) fillHistory(roster, people, config, addDays(date, -1), clicks, history)
+  return roster
+    .filter((contact) => !clicks.any.has(contact.id) && isEligible(contact, memberId, date, new Set(), history, config, clicks))
+    .sort((left, right) => compareForPick(date, memberId, left, right, clicks))
+}
+
+function fillHistory(
+  roster: Contact[],
+  people: TeamMember[],
+  config: PlanConfig,
+  throughDate: string,
+  clicks: ClickIndex,
+  history: Map<string, { lastDate: string; members: Set<string> }>,
+  assignments?: Assignment[],
+) {
+  for (const date of eachDate(config.startDate, throughDate)) {
     const order = [...people].sort((left, right) => compareNumber(memberOrderRank(date, left.id), memberOrderRank(date, right.id), left.id, right.id))
     const takenToday = new Set<string>()
-
     for (let slot = 0; slot < config.cardsPerDay; slot += 1) {
       for (const member of order) {
         const eligible = roster.filter((contact) => isEligible(contact, member.id, date, takenToday, history, config, clicks))
@@ -47,12 +75,10 @@ export function planAssignments(
         past.lastDate = date
         past.members.add(member.id)
         history.set(chosen.id, past)
-        assignments.push({ date, contactId: chosen.id, memberId: member.id })
+        assignments?.push({ date, contactId: chosen.id, memberId: member.id })
       }
     }
   }
-
-  return assignments
 }
 
 export function emptyClicks(): ClickIndex {

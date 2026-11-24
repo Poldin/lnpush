@@ -7,22 +7,25 @@ const clicks = [
   {
     memberId: 'paolo',
     contactId: 'eleni',
-    contactName: 'Eleni Nikoloudaki',
-    company: 'Brusa HyPower',
+        contactName: 'Eleni Nikoloudaki',
+        role: 'Head of HW',
+        company: 'Brusa HyPower',
     clickedAt: '2026-11-24T18:30:00Z',
   },
   {
     memberId: 'andrea',
     contactId: 'dave',
-    contactName: 'Dave Hutton',
-    company: 'CISSOID',
+        contactName: 'Dave Hutton',
+        role: 'CEO',
+        company: 'CISSOID',
     clickedAt: '2026-11-24T19:00:00Z',
   },
   {
     memberId: 'paolo',
     contactId: 'roland',
-    contactName: 'Roland Fromherz',
-    company: 'Brusa HyPower',
+        contactName: 'Roland Fromherz',
+        role: 'Head of Software',
+        company: 'Brusa HyPower',
     clickedAt: '2026-11-20T10:00:00Z',
   },
 ]
@@ -47,6 +50,7 @@ describe('own openings', () => {
       {
         contactId: 'eleni',
         contactName: 'Eleni Nikoloudaki',
+        role: 'Head',
         company: 'Brusa',
         clickedAt: '2026-11-24T18:30:02Z',
         whenLabel: '24 nov, 19:30',
@@ -59,6 +63,7 @@ describe('own openings', () => {
       {
         contactId: 'eleni',
         contactName: 'Eleni Nikoloudaki',
+        role: 'Head',
         company: 'Brusa',
         clickedAt: '2026-11-24T18:30:03Z',
         whenLabel: '24 nov, 19:30',
