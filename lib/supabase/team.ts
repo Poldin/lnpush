@@ -2,7 +2,7 @@ import type { SupabaseClient, User } from '@supabase/supabase-js'
 
 import { contactIsTechnical } from '../classify'
 import { normalizeLinkedInUrl } from '../linkedin'
-import { ownOpenings, type UsageClick } from '../usage'
+import { ownCounts, ownOpenings, type UsageClick } from '../usage'
 import type { Contact, TeamMember, UsageView } from '../types'
 
 export type TeamRow = {
@@ -87,7 +87,7 @@ export async function loadUsage(supabase: SupabaseClient, memberId: string, time
     .eq('team_member_id', memberId)
     .order('clicked_at', { ascending: false })
 
-  if (error) return { unavailable: true, recent: [] }
+  if (error) return { unavailable: true, counts: { today: 0, week: 0, total: 0 }, recent: [] }
 
   const clicks: UsageClick[] = []
   for (const row of data ?? []) {
@@ -101,7 +101,11 @@ export async function loadUsage(supabase: SupabaseClient, memberId: string, time
       clickedAt: row.clicked_at,
     })
   }
-  return { unavailable: false, recent: ownOpenings(clicks, memberId, timeZone) }
+  return {
+    unavailable: false,
+    counts: ownCounts(clicks, memberId, timeZone),
+    recent: ownOpenings(clicks, memberId, timeZone),
+  }
 }
 
 function one<T>(value: T | T[] | null): T | null {

@@ -1,20 +1,27 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 
 import { todayIso } from '../lib/dates'
 import { createBrowserSupabase } from '../lib/supabase/browser'
-import { mergeOpening, toOpening } from '../lib/usage'
-import type { CardView, ContactLabel, HomeView, UsageRecentView, UsageView } from '../lib/types'
+import { parseTab, type AppTab } from '../lib/tabs'
+import { applyOpening, toOpening } from '../lib/usage'
+import type { CardView, ContactLabel, HomeView, UsageCounts, UsageView } from '../lib/types'
 
 // Same-tab on phones so the OS can hand https://www.linkedin.com/in/... to the LinkedIn app.
 const DESKTOP_LINK = '(min-width: 900px) and (pointer: fine)'
 
 export function TodayApp({ view, usage }: { view: HomeView; usage: UsageView }) {
-  const [tab, setTab] = useState<'elenco' | 'utilizzo'>('elenco')
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const tab = parseTab(searchParams.get('tab'))
   const [newTab, setNewTab] = useState(false)
   const [hiddenIds, setHiddenIds] = useState<Set<string>>(() => new Set(view.openedContactIds))
-  const [recent, setRecent] = useState<UsageRecentView[]>(usage.recent)
+  const [mine, setMine] = useState<{ recent: UsageView['recent']; counts: UsageCounts }>({
+    recent: usage.recent,
+    counts: usage.counts,
+  })
   const [armedId, setArmedId] = useState<string | null>(null)
   const armTimer = useRef<number | null>(null)
   const [passkey, setPasskey] = useState<'hidden' | 'offer' | 'ready' | 'done'>('hidden')
@@ -73,6 +80,13 @@ export function TodayApp({ view, usage }: { view: HomeView; usage: UsageView }) 
     )
   }
 
+  function selectTab(next: AppTab) {
+    if (next === tab) return
+    const params = new URLSearchParams(searchParams.toString())
+    params.set('tab', next)
+    router.replace(`/?${params.toString()}`, { scroll: false })
+  }
+
   function later() {
     window.sessionStorage.setItem('lnpush-passkey-later', '1')
     setPasskey('hidden')
@@ -103,20 +117,16 @@ export function TodayApp({ view, usage }: { view: HomeView; usage: UsageView }) 
   }
 
   function rememberOwnOpening(contactId: string, clickedAt: string, label?: ContactLabel) {
-    setRecent((current) =>
-      mergeOpening(
-        current,
-        toOpening(
-          {
-            contactId,
-            contactName: label?.name ?? view.contactLabels[contactId]?.name ?? 'Profilo',
-            company: label?.company ?? view.contactLabels[contactId]?.company ?? '',
-            clickedAt,
-          },
-          view.timezone,
-        ),
-      ),
+    const opening = toOpening(
+      {
+        contactId,
+        contactName: label?.name ?? view.contactLabels[contactId]?.name ?? 'Profilo',
+        company: label?.company ?? view.contactLabels[contactId]?.company ?? '',
+        clickedAt,
+      },
+      view.timezone,
     )
+    setMine((current) => applyOpening(current, opening, view.timezone))
   }
 
   function confirmOpen(card: CardView) {
@@ -173,15 +183,15 @@ export function TodayApp({ view, usage }: { view: HomeView; usage: UsageView }) 
         </form>
       </div>
       <div className="tabs" role="tablist" aria-label="Sezioni">
-        <button className={tab === 'elenco' ? 'tab on' : 'tab'} type="button" role="tab" aria-selected={tab === 'elenco'} onClick={() => setTab('elenco')}>
+        <button className={tab === 'elenco' ? 'tab on' : 'tab'} type="button" role="tab" aria-selected={tab === 'elenco'} onClick={() => selectTab('elenco')}>
           Elenco
         </button>
-        <button className={tab === 'utilizzo' ? 'tab on' : 'tab'} type="button" role="tab" aria-selected={tab === 'utilizzo'} onClick={() => setTab('utilizzo')}>
+        <button className={tab === 'utilizzo' ? 'tab on' : 'tab'} type="button" role="tab" aria-selected={tab === 'utilizzo'} onClick={() => selectTab('utilizzo')}>
           Utilizzo
         </button>
       </div>
 
-      {tab === 'utilizzo' ? <UsagePanel unavailable={usage.unavailable} recent={recent} /> : null}
+      {tab === 'utilizzo' ? <UsagePanel unavailable={usage.unavailable} counts={mine.counts} recent={mine.recent} /> : null}
 
       {tab === 'elenco' && passkey === 'offer' ? (
         <section className="card passkey">
@@ -290,7 +300,15 @@ function ProfileLink({
   )
 }
 
-function UsagePanel({ unavailable, recent }: { unavailable: boolean; recent: UsageRecentView[] }) {
+function UsagePanel({
+  unavailable,
+  counts,
+  recent,
+}: {
+  unavailable: boolean
+  counts: UsageCounts
+  recent: UsageView['recent']
+}) {
   if (unavailable) {
     return (
       <section className="card" id="lista">
@@ -304,6 +322,22 @@ function UsagePanel({ unavailable, recent }: { unavailable: boolean; recent: Usa
       <h1 className="list-title" id="utilizzo-title">
         Le tue aperture
       </h1>
+      <article className="card">
+        <dl className="stats">
+          <div>
+            <dt>Oggi</dt>
+            <dd>{counts.today}</dd>
+          </div>
+          <div>
+            <dt>7 giorni</dt>
+            <dd>{counts.week}</dd>
+          </div>
+          <div>
+            <dt>Totale</dt>
+            <dd>{counts.total}</dd>
+          </div>
+        </dl>
+      </article>
       {recent.length === 0 ? <p className="role">Nessuna apertura ancora.</p> : null}
       <div className="cards">
         {recent.map((item) => (
