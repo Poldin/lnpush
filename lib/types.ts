@@ -73,6 +73,7 @@ export type ClickIndex = {
 export type UsageRecentView = {
   contactId: string
   contactName: string
+  role: string
   company: string
   whenLabel: string
   clickedAt: string
@@ -92,6 +93,7 @@ export type UsageView = {
 
 export type ContactLabel = {
   name: string
+  role: string
   company: string
 }
 
@@ -101,6 +103,7 @@ export type HomeView = {
   memberId: string
   memberName: string
   cards: CardView[]
+  companies: string[]
   openedContactIds: string[]
   contactLabels: Record<string, ContactLabel>
   beforeStart: boolean

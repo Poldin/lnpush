@@ -18,15 +18,22 @@ export function TodayApp({
   timezone,
   isoDate,
   initialTab,
+  initialCompanies,
 }: {
   memberId: string
   memberName: string
   timezone: string
   isoDate: string
   initialTab: AppTab
+  initialCompanies: string[]
 }) {
   const router = useRouter()
   const [tab, setTab] = useState<AppTab>(initialTab)
+  const [companies, setCompanies] = useState<string[]>(initialCompanies)
+  const [companyQuery, setCompanyQuery] = useState('')
+  const [filterOpen, setFilterOpen] = useState(false)
+  const [shownCount, setShownCount] = useState(20)
+  const [usageShown, setUsageShown] = useState(10)
   const [elenco, setElenco] = useState<HomeView | null>(null)
   const [elencoError, setElencoError] = useState(false)
   const [usage, setUsage] = useState<UsageView | null>(null)
@@ -94,10 +101,30 @@ export function TodayApp({
     )
   }
 
+  function writeUrl(nextTab: AppTab, nextCompanies: string[]) {
+    const params = new URLSearchParams()
+    params.set('tab', nextTab)
+    for (const company of nextCompanies) params.append('aziende', company)
+    router.replace(`/?${params.toString()}`, { scroll: false })
+  }
+
   function selectTab(next: AppTab) {
     if (next === tab) return
     setTab(next)
-    router.replace(next === 'utilizzo' ? '/?tab=utilizzo' : '/?tab=elenco', { scroll: false })
+    writeUrl(next, companies)
+  }
+
+  function toggleCompany(company: string) {
+    const next = companies.includes(company) ? companies.filter((item) => item !== company) : [...companies, company]
+    setCompanies(next)
+    setShownCount(20)
+    writeUrl(tab, next)
+  }
+
+  function clearCompanies() {
+    setCompanies([])
+    setShownCount(20)
+    writeUrl(tab, [])
   }
 
   useEffect(() => {
@@ -169,6 +196,7 @@ export function TodayApp({
       {
         contactId,
         contactName: label?.name ?? labelsRef.current[contactId]?.name ?? 'Profilo',
+        role: label?.role ?? labelsRef.current[contactId]?.role ?? '',
         company: label?.company ?? labelsRef.current[contactId]?.company ?? '',
         clickedAt,
       },
@@ -182,7 +210,7 @@ export function TodayApp({
     armTimer.current = null
     setArmedId(null)
     hideContact(card.id)
-    rememberOwnOpening(card.id, new Date().toISOString(), { name: card.name, company: card.company })
+    rememberOwnOpening(card.id, new Date().toISOString(), { name: card.name, role: card.role, company: card.company })
     const body = new Blob([JSON.stringify({ contactId: card.id })], { type: 'application/json' })
     const sent = navigator.sendBeacon?.('/api/clicks', body) ?? false
     if (!sent) {
@@ -214,6 +242,12 @@ export function TodayApp({
   }, [memberId, timezone])
 
   const visibleCards = (elenco?.cards ?? []).filter((card) => !hiddenIds.has(card.id))
+  const filteredCards =
+    companies.length === 0 ? visibleCards : visibleCards.filter((card) => companies.includes(card.company))
+  const shownCards = filteredCards.slice(0, shownCount)
+  const companyChoices = (elenco?.companies ?? []).filter((company) =>
+    company.toLocaleLowerCase('it').includes(companyQuery.trim().toLocaleLowerCase('it')),
+  )
 
   return (
     <main className="wrap">
@@ -241,9 +275,15 @@ export function TodayApp({
 
       {tab === 'utilizzo' ? (
         usageError || usage?.unavailable ? (
-          <UsagePanel unavailable counts={{ today: 0, week: 0, total: 0 }} recent={[]} />
+          <UsagePanel unavailable counts={{ today: 0, week: 0, total: 0 }} recent={[]} shown={0} onMore={() => undefined} />
         ) : mine ? (
-          <UsagePanel unavailable={false} counts={mine.counts} recent={mine.recent} />
+          <UsagePanel
+            unavailable={false}
+            counts={mine.counts}
+            recent={mine.recent}
+            shown={usageShown}
+            onMore={() => setUsageShown((current) => current + 10)}
+          />
         ) : (
           <UsageSkeleton />
         )
@@ -290,19 +330,32 @@ export function TodayApp({
         </section>
       ) : null}
 
-      {tab === 'elenco' && elenco && !elenco.beforeStart && visibleCards.length > 0 ? (
+      {tab === 'elenco' && elenco && !elenco.beforeStart ? (
+        <CompanyFilter
+          open={filterOpen}
+          query={companyQuery}
+          selected={companies}
+          choices={companyChoices}
+          onToggleOpen={() => setFilterOpen((current) => !current)}
+          onQuery={setCompanyQuery}
+          onToggle={toggleCompany}
+          onClear={clearCompanies}
+        />
+      ) : null}
+
+      {tab === 'elenco' && elenco && !elenco.beforeStart && filteredCards.length === 0 && visibleCards.length > 0 ? (
+        <section className="card">
+          <h2 className="name">Nessun profilo</h2>
+          <p className="role">Nessun profilo per le aziende scelte.</p>
+        </section>
+      ) : null}
+
+      {tab === 'elenco' && elenco && !elenco.beforeStart && shownCards.length > 0 ? (
         <section id="lista" aria-label="Elenco">
           <div className="cards">
-            {visibleCards.map((card) => (
+            {shownCards.map((card) => (
               <article className="card" key={card.id}>
-                {card.company ? (
-                  <p className="company">
-                    <BuildingIcon />
-                    <span>{card.company}</span>
-                  </p>
-                ) : null}
-                <h3 className="name">{card.name}</h3>
-                {card.role ? <p className="role">{card.role}</p> : null}
+                <ProfileFacts name={card.name} role={card.role} company={card.company} />
                 <div className="card-action">
                   <ProfileLink
                     card={card}
@@ -315,9 +368,68 @@ export function TodayApp({
               </article>
             ))}
           </div>
+          {shownCards.length < filteredCards.length ? (
+            <button className="ghost wide more" type="button" onClick={() => setShownCount((current) => current + 20)}>
+              Carica altri
+            </button>
+          ) : null}
         </section>
       ) : null}
     </main>
+  )
+}
+
+function CompanyFilter({
+  open,
+  query,
+  selected,
+  choices,
+  onToggleOpen,
+  onQuery,
+  onToggle,
+  onClear,
+}: {
+  open: boolean
+  query: string
+  selected: string[]
+  choices: string[]
+  onToggleOpen: () => void
+  onQuery: (value: string) => void
+  onToggle: (company: string) => void
+  onClear: () => void
+}) {
+  const label = selected.length === 0 ? 'Tutte le aziende' : selected.length === 1 ? selected[0] : `${selected.length} aziende`
+  return (
+    <div className="filter">
+      <button className="filter-button" type="button" aria-expanded={open} onClick={onToggleOpen}>
+        <span>{label}</span>
+        <span aria-hidden="true">{open ? '–' : '+'}</span>
+      </button>
+      {open ? (
+        <div className="filter-panel">
+          <input
+            className="filter-search"
+            type="search"
+            value={query}
+            placeholder="Cerca azienda"
+            aria-label="Cerca azienda"
+            onChange={(event) => onQuery(event.target.value)}
+          />
+          <button className="linkish" type="button" onClick={onClear} disabled={selected.length === 0}>
+            Azzera
+          </button>
+          <div className="filter-list">
+            {choices.length === 0 ? <p className="role">Nessuna azienda trovata.</p> : null}
+            {choices.map((company) => (
+              <label className="filter-option" key={company}>
+                <input type="checkbox" checked={selected.includes(company)} onChange={() => onToggle(company)} />
+                <span>{company}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </div>
   )
 }
 
@@ -366,10 +478,14 @@ function UsagePanel({
   unavailable,
   counts,
   recent,
+  shown,
+  onMore,
 }: {
   unavailable: boolean
   counts: UsageCounts
   recent: UsageView['recent']
+  shown: number
+  onMore: () => void
 }) {
   if (unavailable) {
     return (
@@ -402,15 +518,34 @@ function UsagePanel({
       </article>
       {recent.length === 0 ? <p className="role">Nessuna apertura ancora.</p> : null}
       <div className="cards">
-        {recent.map((item) => (
+        {recent.slice(0, shown).map((item) => (
           <article className="card" key={`${item.contactId}-${item.clickedAt}`}>
-            <h2 className="name">{item.contactName}</h2>
-            {item.company ? <p className="role">{item.company}</p> : null}
-            <p className="when">{item.whenLabel}</p>
+            <ProfileFacts name={item.contactName} role={item.role} company={item.company} when={item.whenLabel} />
           </article>
         ))}
       </div>
+      {shown < recent.length ? (
+        <button className="ghost wide more" type="button" onClick={onMore}>
+          Carica altri
+        </button>
+      ) : null}
     </section>
+  )
+}
+
+function ProfileFacts({ name, role, company, when }: { name: string; role: string; company: string; when?: string }) {
+  return (
+    <>
+      {company ? (
+        <p className="company">
+          <BuildingIcon />
+          <span>{company}</span>
+        </p>
+      ) : null}
+      <h3 className="name">{name}</h3>
+      {role ? <p className="role">{role}</p> : null}
+      {when ? <p className="when">{when}</p> : null}
+    </>
   )
 }
 

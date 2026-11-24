@@ -219,6 +219,73 @@ input:-webkit-autofill {
   font-size: 15px;
 }
 
+.filter {
+  margin-bottom: 14px;
+}
+
+.filter-button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 16px;
+  border: 1px solid #000;
+  border-radius: 14px;
+  background: #fff;
+  color: #000;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.filter-panel {
+  margin-top: 8px;
+  padding: 12px;
+  border: 1px solid #000;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.filter-search {
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 12px;
+  border: 1px solid #000;
+  border-radius: 12px;
+  background: #fff;
+  color: #000;
+  font: inherit;
+  font-size: 16px;
+}
+
+.filter-list {
+  max-height: 50vh;
+  margin-top: 8px;
+  overflow: auto;
+}
+
+.filter-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  font-size: 16px;
+}
+
+.filter-option input {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+}
+
+.more {
+  margin-top: 12px;
+}
+
 .skeleton-card {
   display: flex;
   flex-direction: column;

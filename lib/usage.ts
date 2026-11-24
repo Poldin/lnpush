@@ -4,6 +4,7 @@ export type UsageClick = {
   memberId: string
   contactId: string
   contactName: string
+  role: string
   company: string
   clickedAt: string
 }
@@ -17,12 +18,11 @@ export type OwnCounts = {
 export type OwnOpening = {
   contactId: string
   contactName: string
+  role: string
   company: string
   whenLabel: string
   clickedAt: string
 }
-
-const RECENT_LIMIT = 40
 
 export function ownCounts(clicks: UsageClick[], memberId: string, timeZone: string, now = new Date()): OwnCounts {
   const today = todayIso(timeZone, now)
@@ -41,7 +41,6 @@ export function ownOpenings(clicks: UsageClick[], memberId: string, timeZone: st
   return clicks
     .filter((click) => click.memberId === memberId && click.contactId)
     .sort((left, right) => right.clickedAt.localeCompare(left.clickedAt))
-    .slice(0, RECENT_LIMIT)
     .map((click) => toOpening(click, timeZone))
 }
 
@@ -78,13 +77,17 @@ export function mergeOpening(current: OwnOpening[], next: OwnOpening): OwnOpenin
     const gap = Math.abs(Date.parse(item.clickedAt) - nextTime)
     return Number.isNaN(gap) || gap > 20000
   })
-  return [next, ...withoutNearDuplicate].sort((left, right) => right.clickedAt.localeCompare(left.clickedAt)).slice(0, RECENT_LIMIT)
+  return [next, ...withoutNearDuplicate].sort((left, right) => right.clickedAt.localeCompare(left.clickedAt))
 }
 
-export function toOpening(click: Pick<UsageClick, 'contactId' | 'contactName' | 'company' | 'clickedAt'>, timeZone: string): OwnOpening {
+export function toOpening(
+  click: Pick<UsageClick, 'contactId' | 'contactName' | 'role' | 'company' | 'clickedAt'>,
+  timeZone: string,
+): OwnOpening {
   return {
     contactId: click.contactId,
     contactName: click.contactName || 'Profilo',
+    role: click.role,
     company: click.company,
     clickedAt: click.clickedAt,
     whenLabel: formatRomeDateTime(click.clickedAt, timeZone),

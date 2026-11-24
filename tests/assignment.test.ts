@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { clickIndex, planAssignments } from '../lib/assignment'
+import { clickIndex, planAssignments, queueForMember } from '../lib/assignment'
 import { suggestAction } from '../lib/classify'
 import { contactsFromCsv } from '../lib/contacts'
 import { parseCsv } from '../lib/csv'
@@ -234,6 +234,20 @@ describe('assignment rules', () => {
       clickIndex([{ memberId: 'me', contactId: 'only' }]),
     )
     expect(ownClick.map((item) => item.contactId)).toEqual(['other'])
+  })
+
+  it('pages through every eligible contact, never-opened first, in a stable order', () => {
+    const rules = config({ cardsPerDay: 5, cooldownDays: 12, startDate: '2026-09-01', affinityEnabled: false })
+    const roster = Array.from({ length: 8 }, (_, index) => contact(`c${index}`))
+    const team = [member('me')]
+    const first = queueForMember(roster, team, rules, '2026-09-01', 'me')
+    const second = queueForMember(roster, team, rules, '2026-09-01', 'me')
+    expect(first).toHaveLength(8)
+    expect(first.map((item) => item.id)).toEqual(second.map((item) => item.id))
+
+    const opened = queueForMember(roster, team, rules, '2026-09-01', 'me', clickIndex([{ memberId: 'other', contactId: 'c0' }]))
+    expect(opened.map((item) => item.id)).not.toContain('c0')
+    expect(opened).toHaveLength(7)
   })
 
   it('keeps the rules on a fixture list and reads config.json', () => {

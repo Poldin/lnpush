@@ -5,11 +5,15 @@ import { loadConfigFile } from '../lib/data'
 import { createServerSupabase } from '../lib/supabase/server'
 import { linkMember, loadActiveTeam, memberForUser } from '../lib/supabase/team'
 import { todayIso } from '../lib/dates'
-import { parseTab, withTab } from '../lib/tabs'
+import { parseCompanies, parseTab, withTab } from '../lib/tabs'
 
 export const dynamic = 'force-dynamic'
 
-export default async function Page({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string; aziende?: string | string[] }>
+}) {
   const params = await searchParams
   try {
     const supabase = await createServerSupabase()
@@ -41,6 +45,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ t
         timezone={config.timezone}
         isoDate={todayIso(config.timezone)}
         initialTab={parseTab(params.tab)}
+        initialCompanies={parseCompanies(params.aziende)}
       />
     )
   } catch (error) {
