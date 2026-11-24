@@ -27,6 +27,12 @@ export async function emailIsOnTeam(supabase: SupabaseClient, email: string): Pr
   return (rows?.length ?? 0) > 0
 }
 
+export async function loadActiveTeam(supabase: SupabaseClient): Promise<TeamRow[]> {
+  const { data, error } = await supabase.from('team_members').select('id, name, email, auth_user_id, active').eq('active', true)
+  if (error) throw new Error('Non riesco a leggere il team.')
+  return (data ?? []) as TeamRow[]
+}
+
 export async function loadRoster(supabase: SupabaseClient, technicalPattern: string) {
   const [contactsResult, teamResult, clicksResult] = await Promise.all([
     supabase

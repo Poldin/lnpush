@@ -1,29 +1,43 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 
 import { todayIso } from '../lib/dates'
 import { createBrowserSupabase } from '../lib/supabase/browser'
-import { parseTab, type AppTab } from '../lib/tabs'
+import type { AppTab } from '../lib/tabs'
 import { applyOpening, toOpening } from '../lib/usage'
 import type { CardView, ContactLabel, HomeView, UsageCounts, UsageView } from '../lib/types'
 
 // Same-tab on phones so the OS can hand https://www.linkedin.com/in/... to the LinkedIn app.
 const DESKTOP_LINK = '(min-width: 900px) and (pointer: fine)'
 
-export function TodayApp({ view, usage }: { view: HomeView; usage: UsageView }) {
+export function TodayApp({
+  memberId,
+  memberName,
+  timezone,
+  isoDate,
+  initialTab,
+}: {
+  memberId: string
+  memberName: string
+  timezone: string
+  isoDate: string
+  initialTab: AppTab
+}) {
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const tab = parseTab(searchParams.get('tab'))
+  const [tab, setTab] = useState<AppTab>(initialTab)
+  const [elenco, setElenco] = useState<HomeView | null>(null)
+  const [elencoError, setElencoError] = useState(false)
+  const [usage, setUsage] = useState<UsageView | null>(null)
+  const [usageError, setUsageError] = useState(false)
   const [newTab, setNewTab] = useState(false)
-  const [hiddenIds, setHiddenIds] = useState<Set<string>>(() => new Set(view.openedContactIds))
-  const [mine, setMine] = useState<{ recent: UsageView['recent']; counts: UsageCounts }>({
-    recent: usage.recent,
-    counts: usage.counts,
-  })
+  const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set())
+  const [mine, setMine] = useState<{ recent: UsageView['recent']; counts: UsageCounts } | null>(null)
   const [armedId, setArmedId] = useState<string | null>(null)
   const armTimer = useRef<number | null>(null)
+  const labelsRef = useRef<HomeView['contactLabels']>({})
+  labelsRef.current = elenco?.contactLabels ?? {}
   const [passkey, setPasskey] = useState<'hidden' | 'offer' | 'ready' | 'done'>('hidden')
   const [passkeyMessage, setPasskeyMessage] = useState('')
 
@@ -37,7 +51,7 @@ export function TodayApp({ view, usage }: { view: HomeView; usage: UsageView }) 
 
   useEffect(() => {
     const checkDay = () => {
-      if (todayIso(view.timezone) !== view.isoDate) window.location.reload()
+      if (todayIso(timezone) !== isoDate) window.location.reload()
     }
     const id = window.setInterval(checkDay, 60000)
     document.addEventListener('visibilitychange', checkDay)
@@ -45,7 +59,7 @@ export function TodayApp({ view, usage }: { view: HomeView; usage: UsageView }) 
       window.clearInterval(id)
       document.removeEventListener('visibilitychange', checkDay)
     }
-  }, [view.isoDate, view.timezone])
+  }, [isoDate, timezone])
 
   useEffect(() => {
     if (window.sessionStorage.getItem('lnpush-passkey-later') === '1') return
@@ -82,10 +96,44 @@ export function TodayApp({ view, usage }: { view: HomeView; usage: UsageView }) 
 
   function selectTab(next: AppTab) {
     if (next === tab) return
-    const params = new URLSearchParams(searchParams.toString())
-    params.set('tab', next)
-    router.replace(`/?${params.toString()}`, { scroll: false })
+    setTab(next)
+    router.replace(next === 'utilizzo' ? '/?tab=utilizzo' : '/?tab=elenco', { scroll: false })
   }
+
+  useEffect(() => {
+    let cancel = false
+    void fetch('/api/elenco')
+      .then(async (response) => {
+        if (cancel) return
+        if (!response.ok) {
+          setElencoError(true)
+          return
+        }
+        const data = (await response.json()) as HomeView
+        setElenco(data)
+        setHiddenIds(new Set(data.openedContactIds))
+      })
+      .catch(() => {
+        if (!cancel) setElencoError(true)
+      })
+    void fetch('/api/utilizzo')
+      .then(async (response) => {
+        if (cancel) return
+        if (!response.ok) {
+          setUsageError(true)
+          return
+        }
+        const data = (await response.json()) as UsageView
+        setUsage(data)
+        setMine({ recent: data.recent, counts: data.counts })
+      })
+      .catch(() => {
+        if (!cancel) setUsageError(true)
+      })
+    return () => {
+      cancel = true
+    }
+  }, [])
 
   function later() {
     window.sessionStorage.setItem('lnpush-passkey-later', '1')
@@ -120,13 +168,13 @@ export function TodayApp({ view, usage }: { view: HomeView; usage: UsageView }) 
     const opening = toOpening(
       {
         contactId,
-        contactName: label?.name ?? view.contactLabels[contactId]?.name ?? 'Profilo',
-        company: label?.company ?? view.contactLabels[contactId]?.company ?? '',
+        contactName: label?.name ?? labelsRef.current[contactId]?.name ?? 'Profilo',
+        company: label?.company ?? labelsRef.current[contactId]?.company ?? '',
         clickedAt,
       },
-      view.timezone,
+      timezone,
     )
-    setMine((current) => applyOpening(current, opening, view.timezone))
+    setMine((current) => applyOpening(current ?? { recent: [], counts: { today: 0, week: 0, total: 0 } }, opening, timezone))
   }
 
   function confirmOpen(card: CardView) {
@@ -155,7 +203,7 @@ export function TodayApp({ view, usage }: { view: HomeView; usage: UsageView }) 
         const row = payload.new as { contact_id?: string; team_member_id?: string; clicked_at?: string }
         if (!row.contact_id) return
         hideContact(row.contact_id)
-        if (row.team_member_id === view.memberId) {
+        if (row.team_member_id === memberId) {
           rememberOwnOpening(row.contact_id, row.clicked_at ?? new Date().toISOString())
         }
       })
@@ -163,9 +211,9 @@ export function TodayApp({ view, usage }: { view: HomeView; usage: UsageView }) 
     return () => {
       void supabase.removeChannel(channel)
     }
-  }, [view.memberId, view.timezone])
+  }, [memberId, timezone])
 
-  const visibleCards = view.cards.filter((card) => !hiddenIds.has(card.id))
+  const visibleCards = (elenco?.cards ?? []).filter((card) => !hiddenIds.has(card.id))
 
   return (
     <main className="wrap">
@@ -174,7 +222,7 @@ export function TodayApp({ view, usage }: { view: HomeView; usage: UsageView }) 
       </a>
       <div className="toolbar">
         <p className="hello">
-          Ciao <strong>{view.memberName}</strong>
+          Ciao <strong>{memberName}</strong>
         </p>
         <form action="/api/logout" method="post">
           <button className="linkish" type="submit">
@@ -191,7 +239,15 @@ export function TodayApp({ view, usage }: { view: HomeView; usage: UsageView }) 
         </button>
       </div>
 
-      {tab === 'utilizzo' ? <UsagePanel unavailable={usage.unavailable} counts={mine.counts} recent={mine.recent} /> : null}
+      {tab === 'utilizzo' ? (
+        usageError || usage?.unavailable ? (
+          <UsagePanel unavailable counts={{ today: 0, week: 0, total: 0 }} recent={[]} />
+        ) : mine ? (
+          <UsagePanel unavailable={false} counts={mine.counts} recent={mine.recent} />
+        ) : (
+          <UsageSkeleton />
+        )
+      ) : null}
 
       {tab === 'elenco' && passkey === 'offer' ? (
         <section className="card passkey">
@@ -208,28 +264,34 @@ export function TodayApp({ view, usage }: { view: HomeView; usage: UsageView }) 
       ) : null}
       {tab === 'elenco' && passkey === 'done' ? <p className="status">Dispositivo registrato.</p> : null}
 
-      {tab === 'elenco' && view.beforeStart ? (
+      {tab === 'elenco' && elencoError ? (
         <section className="card" id="lista">
-          <h2 className="name">Il piano parte il {view.startLabel}</h2>
+          <h2 className="name">Elenco</h2>
+          <p className="role">L’elenco non è leggibile in questo momento.</p>
+        </section>
+      ) : null}
+
+      {tab === 'elenco' && !elenco && !elencoError ? <ElencoSkeleton /> : null}
+
+      {tab === 'elenco' && elenco?.beforeStart ? (
+        <section className="card" id="lista">
+          <h2 className="name">Il piano parte il {elenco.startLabel}</h2>
           <p className="role">Oggi non ci sono profili da aprire.</p>
         </section>
       ) : null}
 
-      {tab === 'elenco' && !view.beforeStart && visibleCards.length === 0 ? (
+      {tab === 'elenco' && elenco && !elenco.beforeStart && visibleCards.length === 0 ? (
         <section className="card" id="lista">
           <h2 className="name">Oggi la lista è vuota</h2>
           <p className="role">
-            I profili già aperti o già usciti restano in pausa {view.cooldownDays} giorni e possono andare al massimo a{' '}
-            {view.maxMembersPerContact} persone del team.
+            I profili già aperti o già usciti restano in pausa {elenco.cooldownDays} giorni e possono andare al massimo a{' '}
+            {elenco.maxMembersPerContact} persone del team.
           </p>
         </section>
       ) : null}
 
-      {tab === 'elenco' && !view.beforeStart && visibleCards.length > 0 ? (
-        <section id="lista" aria-labelledby="lista-title">
-          <h1 className="list-title" id="lista-title">
-            {profileCount(visibleCards.length)}
-          </h1>
+      {tab === 'elenco' && elenco && !elenco.beforeStart && visibleCards.length > 0 ? (
+        <section id="lista" aria-label="Elenco">
           <div className="cards">
             {visibleCards.map((card) => (
               <article className="card" key={card.id}>
@@ -375,6 +437,41 @@ function OpenMark() {
   )
 }
 
-function profileCount(count: number): string {
-  return count === 1 ? '1 profilo' : `${count} profili`
+function ElencoSkeleton() {
+  return (
+    <div className="cards" aria-hidden="true">
+      {['a', 'b', 'c'].map((key) => (
+        <article className="card skeleton-card" key={key}>
+          <div className="skeleton skeleton-line short" />
+          <div className="skeleton skeleton-line name-line" />
+          <div className="skeleton skeleton-line" />
+          <div className="skeleton skeleton-button" />
+        </article>
+      ))}
+    </div>
+  )
+}
+
+function UsageSkeleton() {
+  return (
+    <div aria-hidden="true">
+      <div className="skeleton skeleton-line title-line" />
+      <article className="card skeleton-card">
+        <div className="stats">
+          <div className="skeleton skeleton-count" />
+          <div className="skeleton skeleton-count" />
+          <div className="skeleton skeleton-count" />
+        </div>
+      </article>
+      <div className="cards">
+        {['a', 'b', 'c'].map((key) => (
+          <article className="card skeleton-card" key={key}>
+            <div className="skeleton skeleton-line name-line" />
+            <div className="skeleton skeleton-line" />
+            <div className="skeleton skeleton-line short" />
+          </article>
+        ))}
+      </div>
+    </div>
+  )
 }
