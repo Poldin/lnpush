@@ -36,13 +36,10 @@ export default async function Page() {
       { contacts: roster.contacts, team: roster.team, config, clicks: roster.clicks },
       todayIso(config.timezone),
     )
-    const usage = await loadUsage(supabase, roster.team, config.timezone)
-    return (
-      <TodayApp
-        view={homeForMember(plan, member.id)}
-        usage={{ unavailable: usage.unavailable, members: usage.summary.members, recent: usage.summary.recent }}
-      />
-    )
+    const usage = await loadUsage(supabase, member.id, config.timezone)
+    const openedContactIds = [...new Set(roster.clicks.map((click) => click.contactId))]
+    const contactLabels = Object.fromEntries(roster.contacts.map((contact) => [contact.id, { name: contact.name, company: contact.company }]))
+    return <TodayApp view={homeForMember(plan, member.id, openedContactIds, contactLabels)} usage={usage} />
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Controlla la configurazione.'
     return (

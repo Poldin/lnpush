@@ -70,31 +70,32 @@ export type ClickIndex = {
   any: Set<string>
 }
 
-export type UsageMemberView = {
-  name: string
-  today: number
-  week: number
-  total: number
-}
-
 export type UsageRecentView = {
-  memberName: string
+  contactId: string
   contactName: string
   company: string
   whenLabel: string
+  clickedAt: string
 }
 
 export type UsageView = {
   unavailable: boolean
-  members: UsageMemberView[]
   recent: UsageRecentView[]
+}
+
+export type ContactLabel = {
+  name: string
+  company: string
 }
 
 export type HomeView = {
   isoDate: string
   timezone: string
+  memberId: string
   memberName: string
   cards: CardView[]
+  openedContactIds: string[]
+  contactLabels: Record<string, ContactLabel>
   beforeStart: boolean
   startLabel: string
   cooldownDays: number
