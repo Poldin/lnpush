@@ -1,30 +1,32 @@
-import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 
-import { COOKIE_NAME, authToken, configuredPassword, safeEqual } from '../../lib/auth'
-import { LoginForm } from './LoginForm'
+import { LoginScreen } from './LoginScreen'
+import { createServerSupabase } from '../../lib/supabase/server'
+import { supabasePublicEnv } from '../../lib/supabase/env'
 
 export const dynamic = 'force-dynamic'
 
-export default async function LoginPage() {
-  const password = configuredPassword()
-  if (!password) redirect('/')
-
-  const jar = await cookies()
-  const token = jar.get(COOKIE_NAME)?.value ?? ''
-  if (token && safeEqual(token, await authToken(password))) redirect('/')
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ errore?: string; inviato?: string }>
+}) {
+  const params = await searchParams
+  if (supabasePublicEnv()) {
+    try {
+      const supabase = await createServerSupabase()
+      const { data } = await supabase.auth.getUser()
+      if (data.user) redirect('/')
+    } catch {
+      // The form explains a missing configuration.
+    }
+  }
 
   return (
     <main className="wrap">
-      <header className="hero">
-        <div className="toprow">
-          <p className="kicker">Oggi</p>
-          <p className="brand">Newtwen</p>
-        </div>
-        <h1 className="plain-title">Lista del team</h1>
-        <p className="lede">Password condivisa. Sul telefono resta memorizzata.</p>
-      </header>
-      <LoginForm />
+      <h1 className="screen-title">Entra</h1>
+      <p className="lede">Il link arriva solo se l’email è nel team. Poi puoi registrare questo telefono.</p>
+      <LoginScreen sent={params.inviato === '1'} errorCode={params.errore ?? ''} />
     </main>
   )
 }

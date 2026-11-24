@@ -8,12 +8,11 @@ L'app non entra in LinkedIn, non invia richieste e non raccoglie dati dal social
 
 ## Uso sul telefono
 
-1. Apri la pagina.
-2. Tocca il tuo nome. Resta salvato su quel telefono.
-3. Per ogni scheda tocca **Apri su LinkedIn**. Si apre il profilo.
-4. Su LinkedIn scrivi due righe tue. Resta entro 10–20 inviti al giorno.
+1. Apri la pagina e entra con l’email del team, oppure con il dispositivo se l’hai registrato.
+2. Per ogni scheda tocca **Apri su LinkedIn**. Si apre il profilo.
+3. Su LinkedIn scrivi due righe tue. Resta entro 10–20 inviti al giorno.
 
-Per cambiare persona, tocca **Cambia**.
+Per uscire, tocca **Esci**. La sessione resta sul telefono finché non esci.
 
 La pagina è pensata per il telefono: pulsanti alti, testo largo, una scheda sotto l'altra. Su uno schermo largo il link si apre in una scheda nuova, così la lista resta aperta. Sul telefono la navigazione resta nella stessa finestra, altrimenti iOS e Android non passano il profilo all'app di LinkedIn.
 
@@ -35,46 +34,15 @@ La giornata cambia a mezzanotte di `timezone` (Europe/Rome).
 
 La scheda non mostra il gruppo né un suggerimento Segui o Collegati. Su LinkedIn scegli tu.
 
-## Modificare i contatti
+## Contatti e team
 
-File: `data/contacts.csv` (UTF-8, separato da virgole).
+Stanno su Supabase, tabelle `contacts` e `team_members`. Lo schema è in `supabase/schema.sql`.
 
-| Colonna | A cosa serve |
-| --- | --- |
-| Azienda | Nome azienda in scheda |
-| Nome | Nome e cognome. Obbligatorio per avere una scheda |
-| Ruolo | Ruolo in scheda |
-| Gruppo | Categoria. Decide affinità tecnica e Segui/Collegati |
-| LinkedIn | URL del profilo personale. Vuoto = nessuna scheda |
-| Tag | Opzionale. Se è compilato, sostituisce il Gruppo per l'affinità tecnica |
+Una riga diventa scheda solo se `active` è vero e `linkedin_url` è un profilo `linkedin.com/in/...`.
 
-Fonte, Affidabilita, Ruolo verificato e Note restano nel file per voi. La pagina non le mostra.
+Ogni persona del team ha bisogno di un’email per ricevere il link di accesso. Al primo ingresso l’app scrive `auth_user_id`. Serve la policy nella sezione «DA APPLICARE» dello schema.
 
-In Excel o Fogli Google salva in CSV UTF-8, così accenti e nomi sloveni restano intatti. Tieni le virgolette se un campo contiene una virgola. Nell'ultima riga di un JSON non mettere la virgola finale.
-
-Poi fai commit e push: al deploy la lista si aggiorna.
-
-Con pochi contatti la lista copre alcuni giorni e poi si svuota: ogni profilo può uscire al massimo tre volte, con la pausa in mezzo. Per averne ancora, aggiungi righe con un link `linkedin.com/in/...`.
-
-## Modificare il team
-
-File: `data/team.json`.
-
-```json
-{
-  "members": [
-    { "id": "paolo", "name": "Paolo", "technical": true },
-    { "id": "andrea", "name": "Andrea", "technical": false },
-    { "id": "membro-3", "name": "Membro 3", "technical": true }
-  ]
-}
-```
-
-- `name` è quello che si tocca sul telefono. Puoi cambiarlo quando vuoi.
-- `id` lascialo stabile. Se lo cambi, per il piano è una persona nuova.
-- `technical` a `true` dà priorità ai gruppi che contengono «tecnic» (o alla regex in config).
-
-I tre nomi nel file sono segnaposto: sostituiscili con le persone vere.
+Un profilo già aperto da quella persona non le viene riassegnato. I profili che nessuno ha ancora aperto hanno la precedenza. L’apertura si registra in `clicks` quando si tocca **Apri su LinkedIn**.
 
 ## Configurazione
 
@@ -89,30 +57,29 @@ File: `data/config.json`.
 - `technicalGroupPattern` — regex, senza distinzione tra maiuscole e minuscole. Default `tecnic`.
 - `followGroupPattern` — resta nel file, la pagina non lo usa.
 
-## Password del team
+## Accesso
 
-Opzionale. Variabile d'ambiente `TEAM_PASSWORD`.
+Magic link via Supabase Auth, solo per le email in `team_members`. Dopo il primo ingresso si può registrare un passkey (impronta, volto o PIN). I passkey sono quelli nativi di Supabase Auth: vanno attivati nel dashboard.
 
-- Se è vuota o assente, la pagina è aperta a chi ha il link.
-- Se è impostata, all'ingresso c'è una password condivisa, la stessa per tutti. Il browser la ricorda per circa sei mesi.
-
-In locale crea `.env.local` (non va su git):
+Variabili d’ambiente, già impostate su Vercel:
 
 ```
-TEAM_PASSWORD=scegli-una-password
+SUPABASE_URL=
+SUPABASE_PUBLISHABLE_KEY=
 ```
 
-Puoi copiare `.env.example`.
+In locale copiale in `.env.local`. La chiave publishable può arrivare al browser. Non usare la chiave `service_role`.
 
 ## Deploy su Vercel
 
 1. Porta il repository su GitHub, GitLab o Bitbucket.
 2. Su [vercel.com/new](https://vercel.com/new) importa il repository.
 3. Vercel riconosce Next.js. Lascia build command (`npm run build`) e output predefiniti: non serve altra configurazione.
-4. Per la password: Project Settings → Environment Variables → aggiungi `TEAM_PASSWORD`. Poi rifai il deploy, così il valore entra nella build.
-5. Apri il dominio dal telefono.
+4. Le variabili `SUPABASE_URL` e `SUPABASE_PUBLISHABLE_KEY` sono già nel progetto Vercel. Un nuovo deploy le legge in build.
+5. Nel dashboard Supabase imposta Site URL `https://lnpush.vercel.app` e il redirect `https://lnpush.vercel.app/auth/callback`.
+6. Apri il dominio dal telefono.
 
-Per aggiornare contatti o team modifica i file in `data/` e fai push sul branch di produzione. La pagina si genera a ogni richiesta: a mezzanotte (Europe/Rome) la lista cambia senza un nuovo deploy.
+Contatti e team si aggiornano dalle tabelle Supabase. I numeri del piano restano in `data/config.json`. La giornata cambia a mezzanotte (Europe/Rome) senza un nuovo deploy.
 
 ## Sviluppo
 

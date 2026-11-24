@@ -1,34 +1,49 @@
-import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 
 import { TodayApp } from '../components/TodayApp'
-import { COOKIE_NAME, authToken, configuredPassword, safeEqual } from '../lib/auth'
-import { loadPlan } from '../lib/data'
+import { buildTodayPlan, homeForMember, loadConfigFile } from '../lib/data'
+import { createServerSupabase } from '../lib/supabase/server'
+import { linkMember, loadRoster, memberForUser } from '../lib/supabase/team'
+import { todayIso } from '../lib/dates'
 
 export const dynamic = 'force-dynamic'
 
 export default async function Page() {
-  const gateEnabled = await hasAccess()
   try {
-    const plan = loadPlan()
-    return <TodayApp plan={plan} gateEnabled={gateEnabled} />
+    const supabase = await createServerSupabase()
+    const { data } = await supabase.auth.getUser()
+    if (!data.user) redirect('/login')
+
+    const config = loadConfigFile()
+    const roster = await loadRoster(supabase, config.technicalGroupPattern)
+    const member = memberForUser(roster.teamRows, data.user)
+    if (!member) {
+      return (
+        <main className="wrap">
+          <h1 className="plain-title">Email non nel team</h1>
+          <p className="lede">Questo accesso non corrisponde a una persona attiva del team.</p>
+          <form action="/api/logout" method="post">
+            <button className="primary center" type="submit">
+              Esci
+            </button>
+          </form>
+        </main>
+      )
+    }
+
+    await linkMember(supabase, member, data.user)
+    const plan = buildTodayPlan(
+      { contacts: roster.contacts, team: roster.team, config, clicks: roster.clicks },
+      todayIso(config.timezone),
+    )
+    return <TodayApp view={homeForMember(plan, member.id)} />
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Controlla i file in data/.'
+    const message = error instanceof Error ? error.message : 'Controlla la configurazione.'
     return (
       <main className="wrap">
-        <p className="kicker">Dati</p>
-        <h1 className="plain-title">Controlla i file</h1>
+        <h1 className="plain-title">Controlla i dati</h1>
         <p className="tip">{message}</p>
       </main>
     )
   }
-}
-
-async function hasAccess(): Promise<boolean> {
-  const password = configuredPassword()
-  if (!password) return false
-  const jar = await cookies()
-  const token = jar.get(COOKIE_NAME)?.value ?? ''
-  if (!token || !safeEqual(token, await authToken(password))) redirect('/login')
-  return true
 }

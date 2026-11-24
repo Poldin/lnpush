@@ -62,4 +62,21 @@ export type Dataset = {
   contacts: Contact[]
   team: TeamMember[]
   config: PlanConfig
+  clicks?: { memberId: string; contactId: string }[]
+}
+
+export type ClickIndex = {
+  byMember: Set<string>
+  any: Set<string>
+}
+
+export type HomeView = {
+  isoDate: string
+  timezone: string
+  memberName: string
+  cards: CardView[]
+  beforeStart: boolean
+  startLabel: string
+  cooldownDays: number
+  maxMembersPerContact: number
 }

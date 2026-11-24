@@ -1,6 +1,6 @@
 import { eachDate, daysBetween } from './dates'
 import { assignmentRank, memberOrderRank } from './hash'
-import type { Assignment, Contact, PlanConfig, TeamMember } from './types'
+import type { Assignment, ClickIndex, Contact, PlanConfig, TeamMember } from './types'
 
 /**
  * Deterministic daily plan.
@@ -10,12 +10,15 @@ import type { Assignment, Contact, PlanConfig, TeamMember } from './types'
  * distinct teammates ever receive it.
  * With affinity on, a teammate is served from contacts that share their
  * technical flag when that pool still has someone eligible.
+ * A person never receives a contact they already opened. Profiles nobody
+ * has opened are chosen before the others.
  */
 export function planAssignments(
   contacts: Contact[],
   team: TeamMember[],
   config: PlanConfig,
   throughDate: string,
+  clicks: ClickIndex = emptyClicks(),
 ): Assignment[] {
   const people = uniqueMembers(team)
   const roster = uniqueContacts(contacts)
@@ -33,12 +36,10 @@ export function planAssignments(
 
     for (let slot = 0; slot < config.cardsPerDay; slot += 1) {
       for (const member of order) {
-        const eligible = roster.filter((contact) => isEligible(contact, member.id, date, takenToday, history, config))
+        const eligible = roster.filter((contact) => isEligible(contact, member.id, date, takenToday, history, config, clicks))
         const pool = selectPool(member, eligible, config.affinityEnabled)
         if (pool.length === 0) continue
-        pool.sort((left, right) =>
-          compareNumber(assignmentRank(date, member.id, left.id), assignmentRank(date, member.id, right.id), left.id, right.id),
-        )
+        pool.sort((left, right) => compareForPick(date, member.id, left, right, clicks))
         const chosen = pool[0]
         if (!chosen) continue
         takenToday.add(chosen.id)
@@ -54,6 +55,20 @@ export function planAssignments(
   return assignments
 }
 
+export function emptyClicks(): ClickIndex {
+  return { byMember: new Set<string>(), any: new Set<string>() }
+}
+
+export function clickIndex(rows: { memberId: string; contactId: string }[]): ClickIndex {
+  const index = emptyClicks()
+  for (const row of rows) {
+    if (!row.memberId || !row.contactId) continue
+    index.byMember.add(`${row.memberId}\0${row.contactId}`)
+    index.any.add(row.contactId)
+  }
+  return index
+}
+
 function isEligible(
   contact: Contact,
   memberId: string,
@@ -61,8 +76,10 @@ function isEligible(
   takenToday: Set<string>,
   history: Map<string, { lastDate: string; members: Set<string> }>,
   config: PlanConfig,
+  clicks: ClickIndex,
 ): boolean {
   if (!contact.linkedinUrl || takenToday.has(contact.id)) return false
+  if (clicks.byMember.has(`${memberId}\0${contact.id}`)) return false
   const past = history.get(contact.id)
   if (!past) return true
   if (past.members.has(memberId)) return false
@@ -98,6 +115,13 @@ function uniqueContacts(contacts: Contact[]): Contact[] {
     roster.push({ ...contact, id })
   }
   return roster
+}
+
+function compareForPick(date: string, memberId: string, left: Contact, right: Contact, clicks: ClickIndex): number {
+  const leftSeen = clicks.any.has(left.id) ? 1 : 0
+  const rightSeen = clicks.any.has(right.id) ? 1 : 0
+  if (leftSeen !== rightSeen) return leftSeen - rightSeen
+  return compareNumber(assignmentRank(date, memberId, left.id), assignmentRank(date, memberId, right.id), left.id, right.id)
 }
 
 function compareNumber(leftRank: number, rightRank: number, leftId: string, rightId: string): number {

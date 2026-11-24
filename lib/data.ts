@@ -1,11 +1,10 @@
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 
-import { planAssignments } from './assignment'
+import { clickIndex, planAssignments } from './assignment'
 import { assertPattern } from './classify'
-import { contactsFromCsv } from './contacts'
 import { isIsoDate, splitItalianDate, todayIso } from './dates'
-import type { Dataset, Plan, PlanConfig, TeamMember } from './types'
+import type { Dataset, HomeView, Plan, PlanConfig } from './types'
 
 const DEFAULTS = {
   cardsPerDay: 5,
@@ -18,12 +17,8 @@ const DEFAULTS = {
   followGroupPattern: '^decisore',
 }
 
-export function loadDataset(): Dataset {
-  const directory = path.join(process.cwd(), 'data')
-  const config = loadConfig(readJson(path.join(directory, 'config.json')))
-  const team = teamFromJson(readJson(path.join(directory, 'team.json')))
-  const contacts = contactsFromCsv(readText(path.join(directory, 'contacts.csv')), config.technicalGroupPattern)
-  return { contacts, team, config }
+export function loadConfigFile(): PlanConfig {
+  return loadConfig(readJson(path.join(process.cwd(), 'data', 'config.json')))
 }
 
 export function buildTodayPlan(dataset: Dataset, isoDate = todayIso(dataset.config.timezone)): Plan {
@@ -32,7 +27,7 @@ export function buildTodayPlan(dataset: Dataset, isoDate = todayIso(dataset.conf
   const beforeStart = isoDate < config.startDate
   const todays = beforeStart
     ? []
-    : planAssignments(contacts, team, config, isoDate).filter((item) => item.date === isoDate)
+    : planAssignments(contacts, team, config, isoDate, clickIndex(dataset.clicks ?? [])).filter((item) => item.date === isoDate)
   const byId = new Map(contacts.map((contact) => [contact.id, contact]))
   const cardsByMember: Plan['cardsByMember'] = {}
 
@@ -70,8 +65,18 @@ export function buildTodayPlan(dataset: Dataset, isoDate = todayIso(dataset.conf
   }
 }
 
-export function loadPlan(): Plan {
-  return buildTodayPlan(loadDataset())
+export function homeForMember(plan: Plan, memberId: string): HomeView {
+  const member = plan.members.find((item) => item.id === memberId)
+  return {
+    isoDate: plan.isoDate,
+    timezone: plan.timezone,
+    memberName: member?.name ?? '',
+    cards: plan.cardsByMember[memberId] ?? [],
+    beforeStart: plan.beforeStart,
+    startLabel: plan.startLabel,
+    cooldownDays: plan.cooldownDays,
+    maxMembersPerContact: plan.maxMembersPerContact,
+  }
 }
 
 function loadConfig(raw: unknown): PlanConfig {
@@ -97,29 +102,6 @@ function loadConfig(raw: unknown): PlanConfig {
   return config
 }
 
-export function teamFromJson(raw: unknown): TeamMember[] {
-  const list = Array.isArray(raw)
-    ? raw
-    : asRecord(raw, 'team.json deve contenere "members", un elenco di persone.').members
-  if (!Array.isArray(list)) {
-    throw new Error('team.json deve contenere "members", un elenco di persone.')
-  }
-
-  const seen = new Set<string>()
-  return list.map((entry) => {
-    const member = asRecord(entry, 'Ogni persona del team ha bisogno di id e name.')
-    const id = typeof member.id === 'string' ? member.id.trim() : ''
-    const name = typeof member.name === 'string' ? member.name.trim() : ''
-    if (!id || !name) throw new Error('Ogni persona del team ha bisogno di id e name.')
-    if (seen.has(id)) throw new Error(`Id duplicato nel team: ${id}.`)
-    seen.add(id)
-    if (member.technical !== undefined && typeof member.technical !== 'boolean') {
-      throw new Error(`technical di ${name} deve essere true o false.`)
-    }
-    return { id, name, technical: member.technical === true }
-  })
-}
-
 function integer(value: unknown, label: string, min: number, max: number, fallback: number): number {
   if (value === undefined) return fallback
   if (typeof value !== 'number' || !Number.isInteger(value) || value < min || value > max) {
@@ -141,17 +123,9 @@ function asRecord(value: unknown, message: string): Record<string, unknown> {
 
 function readJson(file: string): unknown {
   try {
-    return JSON.parse(readText(file))
+    return JSON.parse(readFileSync(file, 'utf8'))
   } catch (error) {
     if (error instanceof Error && error.message.startsWith('File mancante')) throw error
     throw new Error(`Impossibile leggere data/${path.basename(file)}. Controlla che sia JSON valido.`)
-  }
-}
-
-function readText(file: string): string {
-  try {
-    return readFileSync(file, 'utf8')
-  } catch {
-    throw new Error(`File mancante: data/${path.basename(file)}.`)
   }
 }

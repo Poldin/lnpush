@@ -1,15 +1,11 @@
-import { readFileSync } from 'node:fs'
-import path from 'node:path'
-
 import { describe, expect, it } from 'vitest'
 
-import { planAssignments } from '../lib/assignment'
+import { clickIndex, planAssignments } from '../lib/assignment'
 import { suggestAction } from '../lib/classify'
 import { contactsFromCsv } from '../lib/contacts'
 import { parseCsv } from '../lib/csv'
-import { loadDataset, buildTodayPlan } from '../lib/data'
+import { buildTodayPlan, loadConfigFile } from '../lib/data'
 import { addDays, daysBetween, todayIso } from '../lib/dates'
-import { requestIsSecure } from '../lib/auth'
 import { hash32 } from '../lib/hash'
 import { normalizeLinkedInUrl } from '../lib/linkedin'
 import type { Contact, PlanConfig, TeamMember } from '../lib/types'
@@ -92,14 +88,6 @@ describe('date helpers', () => {
 
   it('hashes a known FNV-1a vector', () => {
     expect(hash32('a')).toBe(0xe40c292c)
-  })
-
-  it('marks the auth cookie secure only on https', () => {
-    expect(requestIsSecure(new Request('http://localhost/api/login'))).toBe(false)
-    expect(requestIsSecure(new Request('https://oggi.example/api/login'))).toBe(true)
-    expect(
-      requestIsSecure(new Request('http://internal/api/login', { headers: { 'x-forwarded-proto': 'https' } })),
-    ).toBe(true)
   })
 })
 
@@ -227,33 +215,36 @@ describe('assignment rules', () => {
     expect(planAssignments(roster, team, rules, '2026-02-01')).toEqual(planAssignments(roster, team, rules, '2026-02-01'))
   })
 
-  it('holds on the shipped contacts, team and config', () => {
-    const dataset = loadDataset()
-    expect(dataset.contacts.length).toBeGreaterThan(0)
-    expect(dataset.contacts.every((item) => item.linkedinUrl.startsWith('https://www.linkedin.com/in/'))).toBe(true)
+  it('skips a profile that person already opened and prefers profiles nobody opened', () => {
+    const rules = config({ cardsPerDay: 1, startDate: '2026-08-01', affinityEnabled: false })
+    const seenFirst = planAssignments(
+      [contact('seen'), contact('fresh')],
+      [member('me')],
+      rules,
+      '2026-08-01',
+      clickIndex([{ memberId: 'other', contactId: 'seen' }]),
+    )
+    expect(seenFirst.map((item) => item.contactId)).toEqual(['fresh'])
 
-    const horizon = addDays(dataset.config.startDate, 180)
-    const plan = planAssignments(dataset.contacts, dataset.team, dataset.config, horizon)
-    expectRules(plan, dataset.config)
+    const ownClick = planAssignments(
+      [contact('only'), contact('other')],
+      [member('me')],
+      rules,
+      '2026-08-01',
+      clickIndex([{ memberId: 'me', contactId: 'only' }]),
+    )
+    expect(ownClick.map((item) => item.contactId)).toEqual(['other'])
+  })
 
-    if (dataset.config.cooldownDays > 0) {
-      const firstDay = new Set(
-        planAssignments(dataset.contacts, dataset.team, dataset.config, dataset.config.startDate).map((item) => item.contactId),
-      )
-      const next = addDays(dataset.config.startDate, 1)
-      const second = plan.filter((item) => item.date === next)
-      for (const item of second) expect(firstDay.has(item.contactId)).toBe(false)
-    }
-
-    const opening = buildTodayPlan(dataset, dataset.config.startDate)
+  it('keeps the rules on a fixture list and reads config.json', () => {
+    const loaded = loadConfigFile()
+    expect(loaded.cardsPerDay).toBeGreaterThan(0)
+    const roster = Array.from({ length: 12 }, (_, index) => contact(`c${index}`))
+    const team = [member('a'), member('b'), member('c')]
+    const plan = planAssignments(roster, team, loaded, addDays(loaded.startDate, 40))
+    expectRules(plan, loaded)
+    const opening = buildTodayPlan({ contacts: roster, team, config: loaded }, loaded.startDate)
     const flat = Object.values(opening.cardsByMember).flat()
     expect(new Set(flat.map((card) => card.id)).size).toBe(flat.length)
-    for (const member of dataset.team) {
-      expect(opening.cardsByMember[member.id]?.length ?? 0).toBeLessThanOrEqual(dataset.config.cardsPerDay)
-    }
-
-    const csv = readFileSync(path.join(process.cwd(), 'data/contacts.csv'), 'utf8')
-    expect(csv).toContain('Patrick Schatz')
-    expect(contactsFromCsv(csv, dataset.config.technicalGroupPattern)).toHaveLength(dataset.contacts.length)
   })
 })
