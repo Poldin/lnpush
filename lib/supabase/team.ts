@@ -2,6 +2,7 @@ import type { SupabaseClient, User } from '@supabase/supabase-js'
 
 import { contactIsTechnical } from '../classify'
 import { normalizeLinkedInUrl } from '../linkedin'
+import { summarizeUsage, type UsageClick, type UsageSummary } from '../usage'
 import type { Contact, TeamMember } from '../types'
 
 export type TeamRow = {
@@ -77,6 +78,41 @@ export function memberForUser(rows: TeamRow[], user: User): TeamRow | null {
     rows.find((row) => row.email?.toLowerCase() === email && email.length > 0) ??
     null
   )
+}
+
+export async function loadUsage(
+  supabase: SupabaseClient,
+  members: { id: string; name: string }[],
+  timeZone: string,
+): Promise<{ summary: UsageSummary; unavailable: boolean }> {
+  const { data, error } = await supabase
+    .from('clicks')
+    .select(
+      'clicked_at, team_member_id, team_members!clicks_team_member_id_fkey(name), contacts!clicks_contact_id_fkey(full_name, company)',
+    )
+    .order('clicked_at', { ascending: false })
+
+  if (error) return { summary: summarizeUsage(members, [], timeZone), unavailable: true }
+
+  const clicks: UsageClick[] = []
+  for (const row of data ?? []) {
+    const member = one(row.team_members)
+    const contact = one(row.contacts)
+    if (!row.team_member_id || !row.clicked_at) continue
+    clicks.push({
+      memberId: row.team_member_id,
+      memberName: (member?.name ?? '').trim(),
+      contactName: (contact?.full_name ?? '').replace(/\s+/g, ' ').trim(),
+      company: (contact?.company ?? '').replace(/\s+/g, ' ').trim(),
+      clickedAt: row.clicked_at,
+    })
+  }
+  return { summary: summarizeUsage(members, clicks, timeZone), unavailable: false }
+}
+
+function one<T>(value: T | T[] | null): T | null {
+  if (!value) return null
+  return Array.isArray(value) ? (value[0] ?? null) : value
 }
 
 export async function linkMember(supabase: SupabaseClient, member: TeamRow, user: User) {

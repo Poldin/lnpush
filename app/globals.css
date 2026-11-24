@@ -163,6 +163,85 @@ input:-webkit-autofill {
   font-weight: 700;
 }
 
+.tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 0 0 16px;
+}
+
+.tab {
+  min-height: 48px;
+  padding: 12px 10px;
+  border: 1px solid #000;
+  border-radius: 14px;
+  background: #fff;
+  color: #000;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.tab.on {
+  background: #000;
+  color: #fff;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 14px 0 0;
+}
+
+.stats div {
+  min-width: 0;
+}
+
+.stats dt {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.stats dd {
+  margin: 2px 0 0;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.recent-title {
+  margin-top: 22px;
+}
+
+.when {
+  margin: 8px 0 0;
+  font-size: 15px;
+}
+
+.primary.arming {
+  animation: arm-pulse 0.8s ease-in-out infinite;
+}
+
+.primary.arming .btn-label {
+  font-size: 16px;
+  line-height: 1.25;
+}
+
+@keyframes arm-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
 .names,
 .cards {
   display: flex;
@@ -269,6 +348,7 @@ input:-webkit-autofill {
 }
 
 .btn-label {
+  min-width: 0;
   font-size: 18px;
   font-weight: 700;
   line-height: 1.2;
@@ -433,5 +513,11 @@ input:focus-visible,
   .choice:active,
   .ghost:active {
     transform: none;
+  }
+
+  .primary.arming {
+    animation: none;
+    background: #fff;
+    color: #000;
   }
 }

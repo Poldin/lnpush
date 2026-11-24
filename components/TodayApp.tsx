@@ -1,17 +1,20 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { todayIso } from '../lib/dates'
 import { createBrowserSupabase } from '../lib/supabase/browser'
-import type { CardView, HomeView } from '../lib/types'
+import type { CardView, HomeView, UsageView } from '../lib/types'
 
 // Same-tab on phones so the OS can hand https://www.linkedin.com/in/... to the LinkedIn app.
 const DESKTOP_LINK = '(min-width: 900px) and (pointer: fine)'
 
-export function TodayApp({ view }: { view: HomeView }) {
+export function TodayApp({ view, usage }: { view: HomeView; usage: UsageView }) {
+  const [tab, setTab] = useState<'elenco' | 'utilizzo'>('elenco')
   const [newTab, setNewTab] = useState(false)
   const [opened, setOpened] = useState<Set<string>>(new Set())
+  const [armedId, setArmedId] = useState<string | null>(null)
+  const armTimer = useRef<number | null>(null)
   const [passkey, setPasskey] = useState<'hidden' | 'offer' | 'ready' | 'done'>('hidden')
   const [passkeyMessage, setPasskeyMessage] = useState('')
 
@@ -73,6 +76,42 @@ export function TodayApp({ view }: { view: HomeView }) {
     setPasskey('hidden')
   }
 
+  useEffect(() => {
+    return () => {
+      if (armTimer.current) window.clearTimeout(armTimer.current)
+    }
+  }, [])
+
+  function arm(id: string) {
+    if (armTimer.current) window.clearTimeout(armTimer.current)
+    setArmedId(id)
+    armTimer.current = window.setTimeout(() => {
+      setArmedId(null)
+      armTimer.current = null
+    }, 5000)
+  }
+
+  function confirmOpen(card: CardView) {
+    if (armTimer.current) window.clearTimeout(armTimer.current)
+    armTimer.current = null
+    setArmedId(null)
+    setOpened((current) => {
+      const next = new Set(current)
+      next.add(card.id)
+      return next
+    })
+    const body = new Blob([JSON.stringify({ contactId: card.id })], { type: 'application/json' })
+    const sent = navigator.sendBeacon?.('/api/clicks', body) ?? false
+    if (!sent) {
+      void fetch('/api/clicks', {
+        method: 'POST',
+        body: JSON.stringify({ contactId: card.id }),
+        headers: { 'content-type': 'application/json' },
+        keepalive: true,
+      })
+    }
+  }
+
   return (
     <main className="wrap">
       <a className="skip" href="#lista">
@@ -88,8 +127,18 @@ export function TodayApp({ view }: { view: HomeView }) {
           </button>
         </form>
       </div>
+      <div className="tabs" role="tablist" aria-label="Sezioni">
+        <button className={tab === 'elenco' ? 'tab on' : 'tab'} type="button" role="tab" aria-selected={tab === 'elenco'} onClick={() => setTab('elenco')}>
+          Elenco
+        </button>
+        <button className={tab === 'utilizzo' ? 'tab on' : 'tab'} type="button" role="tab" aria-selected={tab === 'utilizzo'} onClick={() => setTab('utilizzo')}>
+          Utilizzo
+        </button>
+      </div>
 
-      {passkey === 'offer' ? (
+      {tab === 'utilizzo' ? <UsagePanel usage={usage} /> : null}
+
+      {tab === 'elenco' && passkey === 'offer' ? (
         <section className="card passkey">
           <h2 className="name">Questo telefono</h2>
           <p className="role">Registra l’impronta, il volto o il PIN. I prossimi accessi non chiedono l’email.</p>
@@ -102,16 +151,16 @@ export function TodayApp({ view }: { view: HomeView }) {
           {passkeyMessage ? <p className="status">{passkeyMessage}</p> : null}
         </section>
       ) : null}
-      {passkey === 'done' ? <p className="status">Dispositivo registrato.</p> : null}
+      {tab === 'elenco' && passkey === 'done' ? <p className="status">Dispositivo registrato.</p> : null}
 
-      {view.beforeStart ? (
+      {tab === 'elenco' && view.beforeStart ? (
         <section className="card" id="lista">
           <h2 className="name">Il piano parte il {view.startLabel}</h2>
           <p className="role">Oggi non ci sono profili da aprire.</p>
         </section>
       ) : null}
 
-      {!view.beforeStart && view.cards.length === 0 ? (
+      {tab === 'elenco' && !view.beforeStart && view.cards.length === 0 ? (
         <section className="card" id="lista">
           <h2 className="name">Oggi la lista è vuota</h2>
           <p className="role">
@@ -121,7 +170,7 @@ export function TodayApp({ view }: { view: HomeView }) {
         </section>
       ) : null}
 
-      {!view.beforeStart && view.cards.length > 0 ? (
+      {tab === 'elenco' && !view.beforeStart && view.cards.length > 0 ? (
         <section id="lista" aria-labelledby="lista-title">
           <h1 className="list-title" id="lista-title">
             {profileCount(view.cards.length)}
@@ -142,23 +191,9 @@ export function TodayApp({ view }: { view: HomeView }) {
                   <ProfileLink
                     card={card}
                     newTab={newTab}
-                    onOpen={() => {
-                      setOpened((current) => {
-                        const next = new Set(current)
-                        next.add(card.id)
-                        return next
-                      })
-                      const body = new Blob([JSON.stringify({ contactId: card.id })], { type: 'application/json' })
-                      const sent = navigator.sendBeacon?.('/api/clicks', body) ?? false
-                      if (!sent) {
-                        void fetch('/api/clicks', {
-                          method: 'POST',
-                          body: JSON.stringify({ contactId: card.id }),
-                          headers: { 'content-type': 'application/json' },
-                          keepalive: true,
-                        })
-                      }
-                    }}
+                    armed={armedId === card.id}
+                    onArm={() => arm(card.id)}
+                    onConfirm={() => confirmOpen(card)}
                   />
                 </div>
               </article>
@@ -170,21 +205,97 @@ export function TodayApp({ view }: { view: HomeView }) {
   )
 }
 
-function ProfileLink({ card, newTab, onOpen }: { card: CardView; newTab: boolean; onOpen: () => void }) {
+function ProfileLink({
+  card,
+  newTab,
+  armed,
+  onArm,
+  onConfirm,
+}: {
+  card: CardView
+  newTab: boolean
+  armed: boolean
+  onArm: () => void
+  onConfirm: () => void
+}) {
   const company = card.company ? `, ${card.company}` : ''
   return (
     <a
-      className="primary"
+      className={armed ? 'primary arming' : 'primary'}
       href={card.linkedinUrl}
       target={newTab ? '_blank' : undefined}
       rel="noopener noreferrer"
       referrerPolicy="no-referrer"
-      aria-label={`Apri il profilo LinkedIn di ${card.name}${company}`}
-      onClick={onOpen}
+      aria-label={
+        armed
+          ? `Tocca di nuovo per aprire il profilo LinkedIn di ${card.name}${company}`
+          : `Apri il profilo LinkedIn di ${card.name}${company}`
+      }
+      onClick={(event) => {
+        if (!armed) {
+          event.preventDefault()
+          onArm()
+          return
+        }
+        onConfirm()
+      }}
     >
       <OpenMark />
-      <span className="btn-label">Apri su LinkedIn</span>
+      <span className="btn-label">{armed ? 'Tocca di nuovo per aprire' : 'Apri su LinkedIn'}</span>
     </a>
+  )
+}
+
+function UsagePanel({ usage }: { usage: UsageView }) {
+  if (usage.unavailable) {
+    return (
+      <section className="card" id="lista">
+        <h2 className="name">Utilizzo</h2>
+        <p className="role">Le aperture non sono leggibili in questo momento.</p>
+      </section>
+    )
+  }
+  return (
+    <section id="lista" aria-labelledby="utilizzo-title">
+      <h1 className="list-title" id="utilizzo-title">
+        Aperture
+      </h1>
+      <div className="cards">
+        {usage.members.map((member) => (
+          <article className="card" key={member.name}>
+            <h2 className="name">{member.name}</h2>
+            <dl className="stats">
+              <div>
+                <dt>Oggi</dt>
+                <dd>{member.today}</dd>
+              </div>
+              <div>
+                <dt>7 giorni</dt>
+                <dd>{member.week}</dd>
+              </div>
+              <div>
+                <dt>Totale</dt>
+                <dd>{member.total}</dd>
+              </div>
+            </dl>
+          </article>
+        ))}
+      </div>
+      <h2 className="list-title recent-title">Ultime aperture</h2>
+      {usage.recent.length === 0 ? <p className="role">Nessuna apertura ancora.</p> : null}
+      <div className="cards">
+        {usage.recent.map((item, index) => (
+          <article className="card" key={`${item.memberName}-${item.contactName}-${item.whenLabel}-${index}`}>
+            <p className="company">
+              <span>{item.memberName}</span>
+            </p>
+            <h3 className="name">{item.contactName}</h3>
+            {item.company ? <p className="role">{item.company}</p> : null}
+            <p className="when">{item.whenLabel}</p>
+          </article>
+        ))}
+      </div>
+    </section>
   )
 }
 
