@@ -10,8 +10,6 @@ import { applyOpening, toOpening } from '../lib/usage'
 import type { CardView, ContactLabel, HomeView, UsageCounts, UsageView } from '../lib/types'
 
 // Same-tab on phones so the OS can hand https://www.linkedin.com/in/... to the LinkedIn app.
-const DESKTOP_LINK = '(min-width: 900px) and (pointer: fine)'
-
 export function TodayApp({
   memberId,
   memberName,
@@ -38,7 +36,6 @@ export function TodayApp({
   const [elencoError, setElencoError] = useState(false)
   const [usage, setUsage] = useState<UsageView | null>(null)
   const [usageError, setUsageError] = useState(false)
-  const [newTab, setNewTab] = useState(false)
   const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set())
   const [mine, setMine] = useState<{ recent: UsageView['recent']; counts: UsageCounts } | null>(null)
   const [armedId, setArmedId] = useState<string | null>(null)
@@ -47,14 +44,6 @@ export function TodayApp({
   labelsRef.current = elenco?.contactLabels ?? {}
   const [passkey, setPasskey] = useState<'hidden' | 'offer' | 'ready' | 'done'>('hidden')
   const [passkeyMessage, setPasskeyMessage] = useState('')
-
-  useEffect(() => {
-    const media = window.matchMedia(DESKTOP_LINK)
-    const applyTab = () => setNewTab(media.matches)
-    applyTab()
-    media.addEventListener('change', applyTab)
-    return () => media.removeEventListener('change', applyTab)
-  }, [])
 
   useEffect(() => {
     const checkDay = () => {
@@ -359,7 +348,6 @@ export function TodayApp({
                 <div className="card-action">
                   <ProfileLink
                     card={card}
-                    newTab={newTab}
                     armed={armedId === card.id}
                     onArm={() => arm(card.id)}
                     onConfirm={() => confirmOpen(card)}
@@ -435,13 +423,11 @@ function CompanyFilter({
 
 function ProfileLink({
   card,
-  newTab,
   armed,
   onArm,
   onConfirm,
 }: {
   card: CardView
-  newTab: boolean
   armed: boolean
   onArm: () => void
   onConfirm: () => void
@@ -449,15 +435,15 @@ function ProfileLink({
   const company = card.company ? `, ${card.company}` : ''
   return (
     <a
-      className={armed ? 'primary arming' : 'primary'}
+      className={armed ? 'see-link arming' : 'see-link'}
       href={card.linkedinUrl}
-      target={newTab ? '_blank' : undefined}
+      target="_blank"
       rel="noopener noreferrer"
       referrerPolicy="no-referrer"
       aria-label={
         armed
           ? `Tocca di nuovo per aprire il profilo LinkedIn di ${card.name}${company}`
-          : `Apri il profilo LinkedIn di ${card.name}${company}`
+          : `Vedi su LinkedIn il profilo di ${card.name}${company}`
       }
       onClick={(event) => {
         if (!armed) {
@@ -468,8 +454,9 @@ function ProfileLink({
         onConfirm()
       }}
     >
-      <OpenMark />
-      <span className="btn-label">{armed ? 'Tocca di nuovo per aprire' : 'Apri su LinkedIn'}</span>
+      <span>{armed ? 'Tocca di nuovo' : 'Vedi su'}</span>
+      <LinkedInMark />
+      <span aria-hidden="true">↗</span>
     </a>
   )
 }
@@ -561,12 +548,12 @@ function BuildingIcon() {
   )
 }
 
-function OpenMark() {
+function LinkedInMark() {
   return (
-    <svg className="mark" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+    <svg className="li-mark" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
       <path
         fill="currentColor"
-        d="M14 5h5v5h-2V8.4l-7.3 7.3-1.4-1.4L15.6 7H14V5zM5 7h6v2H7v8h8v-4h2v6H5V7z"
+        d="M20.45 20.45h-3.55v-5.57c0-1.33-.03-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.35V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.12 2.06 2.06 0 0 1 0 4.12zM7.12 20.45H3.56V9h3.56v11.45zM22.23 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.46c.98 0 1.77-.77 1.77-1.73V1.73C24 .77 23.21 0 22.23 0z"
       />
     </svg>
   )

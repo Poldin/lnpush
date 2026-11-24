@@ -293,7 +293,7 @@ input:-webkit-autofill {
 }
 
 .skeleton {
-  background: #e6e6e6;
+  background: #3a3a40;
   border-radius: 8px;
   animation: skeleton-pulse 1.2s ease-in-out infinite;
 }
@@ -318,10 +318,11 @@ input:-webkit-autofill {
 }
 
 .skeleton-button {
-  height: 64px;
-  margin-top: 6px;
-  border-radius: 16px;
-  background: #000;
+  width: 42%;
+  height: 16px;
+  margin-top: 8px;
+  border-radius: 8px;
+  background: #3a3a40;
 }
 
 .skeleton-count {
@@ -377,10 +378,57 @@ input:-webkit-autofill {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  background: var(--card);
-  border: 1px solid var(--line);
+  background: #16161a;
+  color: #f4f4f5;
+  border: 1px solid #16161a;
   border-radius: 18px;
   padding: 16px;
+}
+
+.card .name {
+  color: #fff;
+}
+
+.card .company,
+.card .role,
+.card .when,
+.card .status {
+  color: #d4d4d8;
+}
+
+.card .linkish {
+  color: #fff;
+}
+
+.card .primary {
+  background: #fff;
+  color: #111;
+  border-color: #fff;
+}
+
+.card-action .see-link {
+  margin-top: 0;
+}
+
+.see-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  margin-top: 12px;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.see-link.arming {
+  animation: arm-pulse 0.8s ease-in-out infinite;
+}
+
+.li-mark {
+  display: block;
+  flex: 0 0 auto;
 }
 
 .company {
@@ -627,7 +675,8 @@ input:focus-visible,
     transform: none;
   }
 
-  .primary.arming {
+  .primary.arming,
+  .see-link.arming {
     animation: none;
     background: #fff;
     color: #000;
