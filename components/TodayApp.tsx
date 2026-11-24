@@ -67,19 +67,6 @@ export function TodayApp({ plan, gateEnabled }: { plan: Plan; gateEnabled: boole
       <a className="skip" href="#lista">
         Vai alla lista
       </a>
-      <header className="hero">
-        <div className="toprow">
-          <p className="kicker">Oggi · {plan.weekday}</p>
-          <p className="brand">Newtwen</p>
-        </div>
-        <h1 className="date-line">
-          <span className="day">{plan.day}</span>
-          <span className="rest">{plan.monthYear}</span>
-        </h1>
-        <p className="tip">
-          Personalizza ogni messaggio. Resta entro <span className="nowrap">10–20</span> inviti al giorno.
-        </p>
-      </header>
 
       {ready && (member || gateEnabled) ? (
         <div className="toolbar">
@@ -114,7 +101,7 @@ export function TodayApp({ plan, gateEnabled }: { plan: Plan; gateEnabled: boole
 
       {ready && !member && plan.members.length > 0 ? (
         <section id="lista">
-          <h2 className="screen-title">Chi sei?</h2>
+          <h1 className="screen-title">Chi sei?</h1>
           <p className="lede">Tocca il tuo nome. Resta memorizzato su questo telefono.</p>
           <div className="names">
             {plan.members.map((item) => (
@@ -133,9 +120,9 @@ export function TodayApp({ plan, gateEnabled }: { plan: Plan; gateEnabled: boole
 
       {ready && member && cards.length > 0 ? (
         <section id="lista" aria-labelledby="lista-title">
-          <h2 className="list-title" id="lista-title">
+          <h1 className="list-title" id="lista-title">
             {profileCount(cards.length)}
-          </h2>
+          </h1>
           <div className="cards">
             {cards.map((card) => (
               <article className="card" key={card.id}>
@@ -152,8 +139,6 @@ export function TodayApp({ plan, gateEnabled }: { plan: Plan; gateEnabled: boole
           </div>
         </section>
       ) : null}
-
-      <p className="footer-note">Il pulsante apre il profilo. Segui o collegati su LinkedIn: la lista di domani arriva da sola.</p>
     </main>
   )
 }

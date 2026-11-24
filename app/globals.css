@@ -111,32 +111,10 @@ input {
   color: var(--muted);
 }
 
-.date-line {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin: 2px 0 0;
-  font-family: var(--font-display), Georgia, 'Iowan Old Style', serif;
-  font-weight: 600;
-}
-
-.date-line .day,
 .plain-title,
 .screen-title,
 .name {
   font-family: var(--font-display), Georgia, 'Iowan Old Style', serif;
-}
-
-.date-line .day {
-  font-size: 48px;
-  line-height: 0.95;
-  letter-spacing: -0.04em;
-}
-
-.date-line .rest {
-  font-size: 22px;
-  line-height: 1.1;
 }
 
 .plain-title,
@@ -151,7 +129,6 @@ input {
 .tip,
 .lede,
 .role,
-.footer-note,
 .status {
   font-size: 16px;
   line-height: 1.45;
@@ -336,10 +313,6 @@ input {
   opacity: 0.92;
 }
 
-.nowrap {
-  white-space: nowrap;
-}
-
 .choice {
   display: flex;
   align-items: center;
@@ -397,11 +370,6 @@ input:focus-visible,
 .skip:focus {
   outline: 3px solid var(--ink);
   outline-offset: 2px;
-}
-
-.footer-note {
-  margin: 18px 0 0;
-  color: var(--muted);
 }
 
 .status {
