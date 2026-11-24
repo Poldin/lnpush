@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import path from 'node:path'
 
 import { planAssignments } from './assignment'
-import { assertPattern, suggestAction } from './classify'
+import { assertPattern } from './classify'
 import { contactsFromCsv } from './contacts'
 import { isIsoDate, splitItalianDate, todayIso } from './dates'
 import type { Dataset, Plan, PlanConfig, TeamMember } from './types'
@@ -47,9 +47,7 @@ export function buildTodayPlan(dataset: Dataset, isoDate = todayIso(dataset.conf
       name: contact.name,
       role: contact.role,
       company: contact.company,
-      group: contact.group,
       linkedinUrl: contact.linkedinUrl,
-      action: suggestAction(contact.group, config.followGroupPattern),
     })
   }
 

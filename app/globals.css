@@ -93,8 +93,7 @@ input {
 }
 
 .kicker,
-.brand,
-.suggest {
+.brand {
   margin: 0;
   font-size: 13px;
   font-weight: 700;
@@ -106,8 +105,7 @@ input {
   color: var(--accent);
 }
 
-.brand,
-.suggest {
+.brand {
   color: var(--muted);
 }
 
@@ -197,6 +195,9 @@ input {
 }
 
 .company {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
   margin: 0;
   font-size: 13px;
   font-weight: 700;
@@ -206,15 +207,15 @@ input {
   overflow-wrap: break-word;
 }
 
-.company::before {
-  content: '';
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  margin-right: 8px;
-  border-radius: 99px;
-  background: var(--accent);
-  transform: translateY(-1px);
+.building {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  margin-top: 0;
+}
+
+.company span {
+  min-width: 0;
 }
 
 .name {
@@ -229,27 +230,8 @@ input {
   margin: 6px 0 0;
 }
 
-.pill {
-  display: inline-flex;
-  align-self: flex-start;
-  max-width: 100%;
-  margin-top: 12px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: var(--chip);
-  color: var(--chip-ink);
-  font-size: 14px;
-  font-weight: 700;
-  line-height: 1.3;
-  overflow-wrap: anywhere;
-}
-
 .card-action {
   margin-top: 16px;
-}
-
-.suggest {
-  margin-bottom: 8px;
 }
 
 .primary,
@@ -295,22 +277,10 @@ input {
   flex: 0 0 auto;
 }
 
-.btn-copy {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.btn-copy strong {
+.btn-label {
   font-size: 18px;
+  font-weight: 700;
   line-height: 1.2;
-}
-
-.btn-copy small {
-  font-size: 14px;
-  font-weight: 600;
-  opacity: 0.92;
 }
 
 .choice {

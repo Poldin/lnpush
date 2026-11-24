@@ -126,12 +126,15 @@ export function TodayApp({ plan, gateEnabled }: { plan: Plan; gateEnabled: boole
           <div className="cards">
             {cards.map((card) => (
               <article className="card" key={card.id}>
-                {card.company ? <p className="company">{card.company}</p> : null}
+                {card.company ? (
+                  <p className="company">
+                    <BuildingIcon />
+                    <span>{card.company}</span>
+                  </p>
+                ) : null}
                 <h3 className="name">{card.name}</h3>
                 {card.role ? <p className="role">{card.role}</p> : null}
-                {card.group ? <p className="pill">{card.group}</p> : null}
                 <div className="card-action">
-                  <p className="suggest">Suggerimento</p>
                   <ProfileLink card={card} newTab={newTab} />
                 </div>
               </article>
@@ -173,14 +176,23 @@ function ProfileLink({ card, newTab }: { card: CardView; newTab: boolean }) {
       target={newTab ? '_blank' : undefined}
       rel="noopener noreferrer"
       referrerPolicy="no-referrer"
-      aria-label={`Apri il profilo LinkedIn di ${card.name}${company}. Suggerimento: ${card.action}`}
+      aria-label={`Apri il profilo LinkedIn di ${card.name}${company}`}
     >
       <OpenMark />
-      <span className="btn-copy">
-        <strong>{card.action}</strong>
-        <small>Apri su LinkedIn</small>
-      </span>
+      <span className="btn-label">Apri su LinkedIn</span>
     </a>
+  )
+}
+
+function BuildingIcon() {
+  return (
+    <svg className="building" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+      <path
+        fill="currentColor"
+        fillRule="evenodd"
+        d="M4 2h16v20H4V2zm3 3h3.2v3.2H7V5zm6.8 0H17v3.2h-3.2V5zM7 10.4h3.2v3.2H7v-3.2zm6.8 0H17v3.2h-3.2v-3.2zM10 16h4v6h-4v-6z"
+      />
+    </svg>
   )
 }
 

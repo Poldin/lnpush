@@ -36,9 +36,7 @@ export type CardView = {
   name: string
   role: string
   company: string
-  group: string
   linkedinUrl: string
-  action: 'Segui' | 'Collegati'
 }
 
 export type MemberView = {
