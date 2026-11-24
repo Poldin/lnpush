@@ -126,3 +126,6 @@ $$;
 
 revoke all on function public.is_team_email(text) from public;
 grant execute on function public.is_team_email(text) to anon, authenticated;
+
+-- Realtime sulle nuove aperture. Da lanciare una volta, se la tabella non è già nella publication.
+alter publication supabase_realtime add table public.clicks;

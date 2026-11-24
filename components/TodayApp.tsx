@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from 'react'
 
 import { todayIso } from '../lib/dates'
 import { createBrowserSupabase } from '../lib/supabase/browser'
-import type { CardView, HomeView, UsageView } from '../lib/types'
+import { mergeOpening, toOpening } from '../lib/usage'
+import type { CardView, ContactLabel, HomeView, UsageRecentView, UsageView } from '../lib/types'
 
 // Same-tab on phones so the OS can hand https://www.linkedin.com/in/... to the LinkedIn app.
 const DESKTOP_LINK = '(min-width: 900px) and (pointer: fine)'
@@ -12,7 +13,8 @@ const DESKTOP_LINK = '(min-width: 900px) and (pointer: fine)'
 export function TodayApp({ view, usage }: { view: HomeView; usage: UsageView }) {
   const [tab, setTab] = useState<'elenco' | 'utilizzo'>('elenco')
   const [newTab, setNewTab] = useState(false)
-  const [opened, setOpened] = useState<Set<string>>(new Set())
+  const [hiddenIds, setHiddenIds] = useState<Set<string>>(() => new Set(view.openedContactIds))
+  const [recent, setRecent] = useState<UsageRecentView[]>(usage.recent)
   const [armedId, setArmedId] = useState<string | null>(null)
   const armTimer = useRef<number | null>(null)
   const [passkey, setPasskey] = useState<'hidden' | 'offer' | 'ready' | 'done'>('hidden')
@@ -91,15 +93,38 @@ export function TodayApp({ view, usage }: { view: HomeView; usage: UsageView }) 
     }, 5000)
   }
 
+  function hideContact(contactId: string) {
+    setHiddenIds((current) => {
+      if (current.has(contactId)) return current
+      const next = new Set(current)
+      next.add(contactId)
+      return next
+    })
+  }
+
+  function rememberOwnOpening(contactId: string, clickedAt: string, label?: ContactLabel) {
+    setRecent((current) =>
+      mergeOpening(
+        current,
+        toOpening(
+          {
+            contactId,
+            contactName: label?.name ?? view.contactLabels[contactId]?.name ?? 'Profilo',
+            company: label?.company ?? view.contactLabels[contactId]?.company ?? '',
+            clickedAt,
+          },
+          view.timezone,
+        ),
+      ),
+    )
+  }
+
   function confirmOpen(card: CardView) {
     if (armTimer.current) window.clearTimeout(armTimer.current)
     armTimer.current = null
     setArmedId(null)
-    setOpened((current) => {
-      const next = new Set(current)
-      next.add(card.id)
-      return next
-    })
+    hideContact(card.id)
+    rememberOwnOpening(card.id, new Date().toISOString(), { name: card.name, company: card.company })
     const body = new Blob([JSON.stringify({ contactId: card.id })], { type: 'application/json' })
     const sent = navigator.sendBeacon?.('/api/clicks', body) ?? false
     if (!sent) {
@@ -111,6 +136,26 @@ export function TodayApp({ view, usage }: { view: HomeView; usage: UsageView }) 
       })
     }
   }
+
+  useEffect(() => {
+    const supabase = createBrowserSupabase()
+    const channel = supabase
+      .channel('public-clicks')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'clicks' }, (payload) => {
+        const row = payload.new as { contact_id?: string; team_member_id?: string; clicked_at?: string }
+        if (!row.contact_id) return
+        hideContact(row.contact_id)
+        if (row.team_member_id === view.memberId) {
+          rememberOwnOpening(row.contact_id, row.clicked_at ?? new Date().toISOString())
+        }
+      })
+      .subscribe()
+    return () => {
+      void supabase.removeChannel(channel)
+    }
+  }, [view.memberId, view.timezone])
+
+  const visibleCards = view.cards.filter((card) => !hiddenIds.has(card.id))
 
   return (
     <main className="wrap">
@@ -136,7 +181,7 @@ export function TodayApp({ view, usage }: { view: HomeView; usage: UsageView }) 
         </button>
       </div>
 
-      {tab === 'utilizzo' ? <UsagePanel usage={usage} /> : null}
+      {tab === 'utilizzo' ? <UsagePanel unavailable={usage.unavailable} recent={recent} /> : null}
 
       {tab === 'elenco' && passkey === 'offer' ? (
         <section className="card passkey">
@@ -160,7 +205,7 @@ export function TodayApp({ view, usage }: { view: HomeView; usage: UsageView }) 
         </section>
       ) : null}
 
-      {tab === 'elenco' && !view.beforeStart && view.cards.length === 0 ? (
+      {tab === 'elenco' && !view.beforeStart && visibleCards.length === 0 ? (
         <section className="card" id="lista">
           <h2 className="name">Oggi la lista è vuota</h2>
           <p className="role">
@@ -170,14 +215,14 @@ export function TodayApp({ view, usage }: { view: HomeView; usage: UsageView }) 
         </section>
       ) : null}
 
-      {tab === 'elenco' && !view.beforeStart && view.cards.length > 0 ? (
+      {tab === 'elenco' && !view.beforeStart && visibleCards.length > 0 ? (
         <section id="lista" aria-labelledby="lista-title">
           <h1 className="list-title" id="lista-title">
-            {profileCount(view.cards.length)}
+            {profileCount(visibleCards.length)}
           </h1>
           <div className="cards">
-            {view.cards.map((card) => (
-              <article className={opened.has(card.id) ? 'card opened' : 'card'} key={card.id}>
+            {visibleCards.map((card) => (
+              <article className="card" key={card.id}>
                 {card.company ? (
                   <p className="company">
                     <BuildingIcon />
@@ -186,7 +231,6 @@ export function TodayApp({ view, usage }: { view: HomeView; usage: UsageView }) 
                 ) : null}
                 <h3 className="name">{card.name}</h3>
                 {card.role ? <p className="role">{card.role}</p> : null}
-                {opened.has(card.id) ? <p className="opened-label">Aperto</p> : null}
                 <div className="card-action">
                   <ProfileLink
                     card={card}
@@ -246,8 +290,8 @@ function ProfileLink({
   )
 }
 
-function UsagePanel({ usage }: { usage: UsageView }) {
-  if (usage.unavailable) {
+function UsagePanel({ unavailable, recent }: { unavailable: boolean; recent: UsageRecentView[] }) {
+  if (unavailable) {
     return (
       <section className="card" id="lista">
         <h2 className="name">Utilizzo</h2>
@@ -258,38 +302,13 @@ function UsagePanel({ usage }: { usage: UsageView }) {
   return (
     <section id="lista" aria-labelledby="utilizzo-title">
       <h1 className="list-title" id="utilizzo-title">
-        Aperture
+        Le tue aperture
       </h1>
+      {recent.length === 0 ? <p className="role">Nessuna apertura ancora.</p> : null}
       <div className="cards">
-        {usage.members.map((member) => (
-          <article className="card" key={member.name}>
-            <h2 className="name">{member.name}</h2>
-            <dl className="stats">
-              <div>
-                <dt>Oggi</dt>
-                <dd>{member.today}</dd>
-              </div>
-              <div>
-                <dt>7 giorni</dt>
-                <dd>{member.week}</dd>
-              </div>
-              <div>
-                <dt>Totale</dt>
-                <dd>{member.total}</dd>
-              </div>
-            </dl>
-          </article>
-        ))}
-      </div>
-      <h2 className="list-title recent-title">Ultime aperture</h2>
-      {usage.recent.length === 0 ? <p className="role">Nessuna apertura ancora.</p> : null}
-      <div className="cards">
-        {usage.recent.map((item, index) => (
-          <article className="card" key={`${item.memberName}-${item.contactName}-${item.whenLabel}-${index}`}>
-            <p className="company">
-              <span>{item.memberName}</span>
-            </p>
-            <h3 className="name">{item.contactName}</h3>
+        {recent.map((item) => (
+          <article className="card" key={`${item.contactId}-${item.clickedAt}`}>
+            <h2 className="name">{item.contactName}</h2>
             {item.company ? <p className="role">{item.company}</p> : null}
             <p className="when">{item.whenLabel}</p>
           </article>

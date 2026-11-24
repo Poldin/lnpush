@@ -4,7 +4,7 @@ import path from 'node:path'
 import { clickIndex, planAssignments } from './assignment'
 import { assertPattern } from './classify'
 import { isIsoDate, splitItalianDate, todayIso } from './dates'
-import type { Dataset, HomeView, Plan, PlanConfig } from './types'
+import type { ContactLabel, Dataset, HomeView, Plan, PlanConfig } from './types'
 
 const DEFAULTS = {
   cardsPerDay: 5,
@@ -65,13 +65,22 @@ export function buildTodayPlan(dataset: Dataset, isoDate = todayIso(dataset.conf
   }
 }
 
-export function homeForMember(plan: Plan, memberId: string): HomeView {
+export function homeForMember(
+  plan: Plan,
+  memberId: string,
+  openedContactIds: string[] = [],
+  contactLabels: Record<string, ContactLabel> = {},
+): HomeView {
   const member = plan.members.find((item) => item.id === memberId)
+  const opened = new Set(openedContactIds)
   return {
     isoDate: plan.isoDate,
     timezone: plan.timezone,
+    memberId,
     memberName: member?.name ?? '',
-    cards: plan.cardsByMember[memberId] ?? [],
+    cards: (plan.cardsByMember[memberId] ?? []).filter((card) => !opened.has(card.id)),
+    openedContactIds,
+    contactLabels,
     beforeStart: plan.beforeStart,
     startLabel: plan.startLabel,
     cooldownDays: plan.cooldownDays,

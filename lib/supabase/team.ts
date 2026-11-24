@@ -2,8 +2,8 @@ import type { SupabaseClient, User } from '@supabase/supabase-js'
 
 import { contactIsTechnical } from '../classify'
 import { normalizeLinkedInUrl } from '../linkedin'
-import { summarizeUsage, type UsageClick, type UsageSummary } from '../usage'
-import type { Contact, TeamMember } from '../types'
+import { ownOpenings, type UsageClick } from '../usage'
+import type { Contact, TeamMember, UsageView } from '../types'
 
 export type TeamRow = {
   id: string
@@ -80,34 +80,28 @@ export function memberForUser(rows: TeamRow[], user: User): TeamRow | null {
   )
 }
 
-export async function loadUsage(
-  supabase: SupabaseClient,
-  members: { id: string; name: string }[],
-  timeZone: string,
-): Promise<{ summary: UsageSummary; unavailable: boolean }> {
+export async function loadUsage(supabase: SupabaseClient, memberId: string, timeZone: string): Promise<UsageView> {
   const { data, error } = await supabase
     .from('clicks')
-    .select(
-      'clicked_at, team_member_id, team_members!clicks_team_member_id_fkey(name), contacts!clicks_contact_id_fkey(full_name, company)',
-    )
+    .select('clicked_at, contact_id, contacts!clicks_contact_id_fkey(full_name, company)')
+    .eq('team_member_id', memberId)
     .order('clicked_at', { ascending: false })
 
-  if (error) return { summary: summarizeUsage(members, [], timeZone), unavailable: true }
+  if (error) return { unavailable: true, recent: [] }
 
   const clicks: UsageClick[] = []
   for (const row of data ?? []) {
-    const member = one(row.team_members)
     const contact = one(row.contacts)
-    if (!row.team_member_id || !row.clicked_at) continue
+    if (!row.contact_id || !row.clicked_at) continue
     clicks.push({
-      memberId: row.team_member_id,
-      memberName: (member?.name ?? '').trim(),
+      memberId,
+      contactId: row.contact_id,
       contactName: (contact?.full_name ?? '').replace(/\s+/g, ' ').trim(),
       company: (contact?.company ?? '').replace(/\s+/g, ' ').trim(),
       clickedAt: row.clicked_at,
     })
   }
-  return { summary: summarizeUsage(members, clicks, timeZone), unavailable: false }
+  return { unavailable: false, recent: ownOpenings(clicks, memberId, timeZone) }
 }
 
 function one<T>(value: T | T[] | null): T | null {

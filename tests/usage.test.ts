@@ -1,51 +1,64 @@
 import { describe, expect, it } from 'vitest'
 
-import { summarizeUsage } from '../lib/usage'
+import { mergeOpening, ownOpenings } from '../lib/usage'
 
-describe('usage summary', () => {
-  it('counts today, the last 7 Rome days, and the total per person', () => {
-    const now = new Date('2026-11-24T20:00:00Z')
-    const summary = summarizeUsage(
-      [
-        { id: 'paolo', name: 'Paolo' },
-        { id: 'andrea', name: 'Andrea' },
-      ],
+describe('own openings', () => {
+  it('keeps only that person, newest first, in Rome time', () => {
+    const openings = ownOpenings(
       [
         {
           memberId: 'paolo',
-          memberName: 'Paolo',
+          contactId: 'eleni',
           contactName: 'Eleni Nikoloudaki',
           company: 'Brusa HyPower',
           clickedAt: '2026-11-24T18:30:00Z',
         },
         {
+          memberId: 'andrea',
+          contactId: 'dave',
+          contactName: 'Dave Hutton',
+          company: 'CISSOID',
+          clickedAt: '2026-11-24T19:00:00Z',
+        },
+        {
           memberId: 'paolo',
-          memberName: 'Paolo',
+          contactId: 'roland',
           contactName: 'Roland Fromherz',
           company: 'Brusa HyPower',
           clickedAt: '2026-11-20T10:00:00Z',
         },
-        {
-          memberId: 'andrea',
-          memberName: 'Andrea',
-          contactName: 'Dave Hutton',
-          company: 'CISSOID',
-          clickedAt: '2026-11-01T10:00:00Z',
-        },
       ],
+      'paolo',
       'Europe/Rome',
-      now,
     )
 
-    expect(summary.members).toEqual([
-      { id: 'andrea', name: 'Andrea', today: 0, week: 0, total: 1 },
-      { id: 'paolo', name: 'Paolo', today: 1, week: 2, total: 2 },
-    ])
-    expect(summary.recent[0]).toMatchObject({
-      memberName: 'Paolo',
+    expect(openings.map((item) => item.contactName)).toEqual(['Eleni Nikoloudaki', 'Roland Fromherz'])
+    expect(openings[0]?.whenLabel).toContain('24')
+    expect(openings[0]?.company).toBe('Brusa HyPower')
+  })
+
+  it('replaces the optimistic row when the same opening arrives live', () => {
+    const optimistic = ownOpenings(
+      [
+        {
+          memberId: 'paolo',
+          contactId: 'eleni',
+          contactName: 'Eleni Nikoloudaki',
+          company: 'Brusa',
+          clickedAt: '2026-11-24T18:30:02Z',
+        },
+      ],
+      'paolo',
+      'Europe/Rome',
+    )
+    const merged = mergeOpening(optimistic, {
+      contactId: 'eleni',
       contactName: 'Eleni Nikoloudaki',
-      company: 'Brusa HyPower',
+      company: 'Brusa',
+      clickedAt: '2026-11-24T18:30:03Z',
+      whenLabel: '24 nov, 19:30',
     })
-    expect(summary.recent[0]?.whenLabel).toContain('24')
+    expect(merged).toHaveLength(1)
+    expect(merged[0]?.clickedAt).toBe('2026-11-24T18:30:03Z')
   })
 })
