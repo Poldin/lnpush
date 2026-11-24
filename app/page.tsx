@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import { TodayApp } from '../components/TodayApp'
 import { buildTodayPlan, homeForMember, loadConfigFile } from '../lib/data'
 import { createServerSupabase } from '../lib/supabase/server'
-import { linkMember, loadRoster, memberForUser } from '../lib/supabase/team'
+import { linkMember, loadRoster, loadUsage, memberForUser } from '../lib/supabase/team'
 import { todayIso } from '../lib/dates'
 
 export const dynamic = 'force-dynamic'
@@ -36,7 +36,13 @@ export default async function Page() {
       { contacts: roster.contacts, team: roster.team, config, clicks: roster.clicks },
       todayIso(config.timezone),
     )
-    return <TodayApp view={homeForMember(plan, member.id)} />
+    const usage = await loadUsage(supabase, roster.team, config.timezone)
+    return (
+      <TodayApp
+        view={homeForMember(plan, member.id)}
+        usage={{ unavailable: usage.unavailable, members: usage.summary.members, recent: usage.summary.recent }}
+      />
+    )
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Controlla la configurazione.'
     return (

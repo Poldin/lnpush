@@ -70,6 +70,26 @@ export type ClickIndex = {
   any: Set<string>
 }
 
+export type UsageMemberView = {
+  name: string
+  today: number
+  week: number
+  total: number
+}
+
+export type UsageRecentView = {
+  memberName: string
+  contactName: string
+  company: string
+  whenLabel: string
+}
+
+export type UsageView = {
+  unavailable: boolean
+  members: UsageMemberView[]
+  recent: UsageRecentView[]
+}
+
 export type HomeView = {
   isoDate: string
   timezone: string
