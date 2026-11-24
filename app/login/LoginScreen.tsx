@@ -3,8 +3,9 @@
 import { useState, type FormEvent } from 'react'
 
 import { createBrowserSupabase } from '../../lib/supabase/browser'
+import { withTab, type AppTab } from '../../lib/tabs'
 
-export function LoginScreen({ sent, errorCode }: { sent: boolean; errorCode: string }) {
+export function LoginScreen({ sent, errorCode, tab }: { sent: boolean; errorCode: string; tab: AppTab }) {
   const [email, setEmail] = useState('')
   const [message, setMessage] = useState(initialMessage(sent, errorCode))
   const [pending, setPending] = useState(false)
@@ -28,14 +29,17 @@ export function LoginScreen({ sent, errorCode }: { sent: boolean; errorCode: str
       const supabase = createBrowserSupabase()
       const { error } = await supabase.auth.signInWithOtp({
         email: email.trim(),
-        options: { emailRedirectTo: `${window.location.origin}/auth/callback`, shouldCreateUser: true },
+        options: {
+          emailRedirectTo: `${window.location.origin}${withTab('/auth/callback', tab)}`,
+          shouldCreateUser: true,
+        },
       })
       if (error) {
         setMessage('Invio non riuscito. Riprova tra poco.')
         setPending(false)
         return
       }
-      window.location.href = '/login?inviato=1'
+      window.location.href = withTab('/login?inviato=1', tab)
     } catch {
       setMessage('Connessione non riuscita. Riprova.')
       setPending(false)
@@ -53,7 +57,7 @@ export function LoginScreen({ sent, errorCode }: { sent: boolean; errorCode: str
         setPending(false)
         return
       }
-      window.location.href = '/'
+      window.location.href = withTab('/', tab)
     } catch {
       setMessage('Questo browser non apre il dispositivo. Entra con l’email.')
       setPending(false)

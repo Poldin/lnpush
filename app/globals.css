@@ -188,6 +188,32 @@ input:-webkit-autofill {
   color: #fff;
 }
 
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.stats div {
+  min-width: 0;
+}
+
+.stats dt {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.stats dd {
+  margin: 2px 0 0;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
 .when {
   margin: 8px 0 0;
   font-size: 15px;

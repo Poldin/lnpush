@@ -78,8 +78,15 @@ export type UsageRecentView = {
   clickedAt: string
 }
 
+export type UsageCounts = {
+  today: number
+  week: number
+  total: number
+}
+
 export type UsageView = {
   unavailable: boolean
+  counts: UsageCounts
   recent: UsageRecentView[]
 }
 
