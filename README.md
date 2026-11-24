@@ -10,7 +10,7 @@ L'app non entra in LinkedIn, non invia richieste e non raccoglie dati dal social
 
 1. Apri la pagina.
 2. Tocca il tuo nome. Resta salvato su quel telefono.
-3. Per ogni scheda tocca **Segui** o **Collegati**. Si apre il profilo.
+3. Per ogni scheda tocca **Apri su LinkedIn**. Si apre il profilo.
 4. Su LinkedIn scrivi due righe tue. Resta entro 10–20 inviti al giorno.
 
 Per cambiare persona, tocca **Cambia**.
@@ -33,7 +33,7 @@ L'ordine delle righe nel CSV non cambia il piano. Lo cambiano: un profilo aggiun
 
 La giornata cambia a mezzanotte di `timezone` (Europe/Rome).
 
-**Segui** se il gruppo corrisponde a `followGroupPattern` (default: inizia con «decisore»). **Collegati** negli altri casi. È un suggerimento: su LinkedIn scegli tu.
+La scheda non mostra il gruppo né un suggerimento Segui o Collegati. Su LinkedIn scegli tu.
 
 ## Modificare i contatti
 
@@ -87,7 +87,7 @@ File: `data/config.json`.
 - `timezone` — default `Europe/Rome`.
 - `affinityEnabled` — `true` o `false`.
 - `technicalGroupPattern` — regex, senza distinzione tra maiuscole e minuscole. Default `tecnic`.
-- `followGroupPattern` — regex per il suggerimento Segui. Default `^decisore`.
+- `followGroupPattern` — resta nel file, la pagina non lo usa.
 
 ## Password del team
 
