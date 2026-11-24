@@ -1,0 +1,8 @@
+{
+  "comment": "Aggiungi o togli persone dall'elenco members. name è quello che si tocca sul telefono: puoi cambiarlo. id lascialo stabile: se lo cambi, per il piano è una persona nuova. technical true dà priorità ai contatti il cui gruppo contiene «tecnic» (vedi config.json).",
+  "members": [
+    { "id": "paolo", "name": "Paolo", "technical": true },
+    { "id": "andrea", "name": "Andrea", "technical": false },
+    { "id": "membro-3", "name": "Membro 3", "technical": true }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "comment": "cardsPerDay: profili per persona al giorno (1-30). cooldownDays: giorni di pausa prima che un profilo passi a qualcun altro. maxMembersPerContact: quante persone diverse del team possono ricevere lo stesso profilo, in tutto. startDate: primo giorno del piano (YYYY-MM-DD); lo storico si ricalcola da qui, non è salvato. timezone: la giornata cambia a mezzanotte di questo fuso. affinityEnabled: i gruppi tecnici vanno prima a chi ha technical true. technicalGroupPattern e followGroupPattern sono regex senza distinzione tra maiuscole e minuscole. Il gruppo che combacia con followGroupPattern riceve il suggerimento Segui; gli altri, Collegati.",
+  "cardsPerDay": 5,
+  "cooldownDays": 12,
+  "maxMembersPerContact": 3,
+  "startDate": "2026-11-24",
+  "timezone": "Europe/Rome",
+  "affinityEnabled": true,
+  "technicalGroupPattern": "tecnic",
+  "followGroupPattern": "^decisore"
+}

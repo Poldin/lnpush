@@ -1,0 +1,41 @@
+Azienda,Nome,Ruolo,Gruppo,LinkedIn,Fonte,Affidabilita,Ruolo verificato,Note
+AVL List,Lukas Walter,"CEO, Management Board",Decisore,,https://www.avl.com/en/about-avl/leadership,alta,sì (sito AVL),Profilo LinkedIn non restituito dalla ricerca
+AVL List,Patrick Schatz,"Global Technical Head of Electrification (trasmissioni, e-axle, EDU, controlli, simulazione)",Decisore tecnico,https://linkedin.com/in/patrick-schatz-aaa32b157,https://linkedin.com/in/patrick-schatz-aaa32b157,alta,"sì (LinkedIn, attuale)",
+AVL List,Inigo Garcia de Madinabeitia Merino,"Lead Engineer Electric Drive Simulation (EM, power electronics, termico, NVH)",Valutatore tecnico,https://linkedin.com/in/inigogdm,https://linkedin.com/in/inigogdm,alta,"sì (LinkedIn, attuale)",Fit perfetto per tema modelli termici
+AVL List,Franz Zieher,Head of Digital Innovation & AI; ex Head of Simulation and Digital Services,Innovazione,https://linkedin.com/in/franzzieher,https://linkedin.com/in/franzzieher,alta,"sì (LinkedIn, da nov 2025)",Co-autore paper su digital twin EDU
+AVL List,Andreas Ficsor,Department Manager Product Management Dynos & Drives; ex Global PM Power Electronics,Product/partnership,https://linkedin.com/in/andreas-ficsor,https://linkedin.com/in/andreas-ficsor,alta,sì (LinkedIn),
+AVL List,Alois Danninger,"Global Head E/E, Software & Controls",Decisore tecnico,https://linkedin.com/in/alois-danninger-5570312b,https://linkedin.com/in/alois-danninger-5570312b,alta,"sì (LinkedIn, da mag 2025)",
+AVL List,Mehdi Mehrgou,"Manager Multibody Dynamics, NVH & Electromagnetism",Simulazione,https://linkedin.com/in/mehdi-mehrgou-23703225,https://linkedin.com/in/mehdi-mehrgou-23703225,media,parziale (solo sintesi motore di ricerca),
+Bonfiglioli (Mobility & Wind),Sonia Bonfiglioli,Chairwoman e Group CEO,Decisore,,https://www.bonfiglioli.com/_default_upload_bucket/Annual%20Report%202025_ENG_FINAL.pdf,alta,sì (fonte societaria),Profilo LinkedIn non restituito
+Bonfiglioli (Mobility & Wind),Andrea Torcelli,Group CTO / Group R&D Director,Decisore tecnico,,https://www.flashintel.ai/people/Andrea-Torcelli-26301f1a69b96b692c79c25fad123c86/,bassa,no (solo aggregatore),Da confermare su sito/report Bonfiglioli
+Bonfiglioli (Mobility & Wind),Michele Pennese,"Director e-Vehicle Solutions Development (eDrive, ePowertrain)",Champion/sponsor,https://linkedin.com/in/michelepennese,https://linkedin.com/in/michelepennese,alta,sì (LinkedIn),
+Bonfiglioli (Mobility & Wind),Massimiliano Franchini,Head of Electric Motors Platform (incl. ottimizzazione termica/NVH),Champion,https://linkedin.com/in/massimiliano-franchini-4a5474a0,https://linkedin.com/in/massimiliano-franchini-4a5474a0,alta,sì (LinkedIn),
+Bonfiglioli (Mobility & Wind),Michele Casanova,"Electric Drive Systems Design Manager, Group R&D (Forlì)",Valutatore tecnico,https://linkedin.com/in/michele-casanova-26379134,https://linkedin.com/in/michele-casanova-26379134,alta,"sì (LinkedIn, attivo 2026)",
+Bonfiglioli (Mobility & Wind),Oscar Cabral Ferreira,"Head of R&D, Bonfiglioli Vectron (inverter/drive, Krefeld)",Decisore tecnico drive,https://linkedin.com/in/oscar-cabral-ferreira-750a93165,https://linkedin.com/in/oscar-cabral-ferreira-750a93165,alta,sì (LinkedIn),"Divisione drive industriali, non Mobility"
+Bonfiglioli (Mobility & Wind),Martin Gendrin,R&D control engineer (algoritmi controllo motore),Utente,https://linkedin.com/in/martin-gendrin-27b97b52,https://linkedin.com/in/martin-gendrin-27b97b52,media,parziale (profilo con due ruoli attuali),
+Brusa HyPower,Holger Fink,CEO,Decisore,,https://www.brusahypower.com/imprint/,alta,sì (imprint societario),Profilo LinkedIn non restituito
+Brusa HyPower,Roland Fromherz,Head of Software Engineering,Valutatore tecnico,https://linkedin.com/in/roland-fromherz-415a05aa,https://linkedin.com/in/roland-fromherz-415a05aa,alta,sì (LinkedIn),
+Brusa HyPower,Eleni Nikoloudaki,Head of HW & PCB Engineering,Valutatore tecnico,https://linkedin.com/in/eleni-nikoloudaki,https://linkedin.com/in/eleni-nikoloudaki,alta,sì (LinkedIn),
+Brusa HyPower,Ivan Furlan,System Architect and Control Expert (modellazione power electronics),Champion,https://linkedin.com/in/ivanfurlan,https://linkedin.com/in/ivanfurlan,alta,sì (LinkedIn),
+Brusa HyPower,Umesh Thirunavukkarasu,Lead basic software / AUTOSAR,Utente,https://linkedin.com/in/umesh-thirunavukkarasu-78305334,https://linkedin.com/in/umesh-thirunavukkarasu-78305334,media,parziale (solo sintesi),
+Brusa HyPower,Roberto Martinbianco,Lead software verification,Utente,https://linkedin.com/in/roberto-martinbianco-65a1b099,https://linkedin.com/in/roberto-martinbianco-65a1b099,media,parziale (solo sintesi),
+Brusa HyPower,Ercan Aktas,"Head of Hardware Design (inverter, OBC, DC-DC)",Valutatore tecnico,https://linkedin.com/in/ercan-aktas-9832a8141,https://linkedin.com/in/ercan-aktas-9832a8141,media,parziale: ruolo sotto BRUSA Technology (entità distinta),Ambiguità tra BRUSA HyPower e BRUSA Technology
+Brusa HyPower,Adin Tuhcic,Sales & Marketing,Commerciale/partnership,,https://linkedin.com/company/brusahypower,bassa,no (citato in sintesi della pagina aziendale),
+CISSOID,Dave Hutton,CEO,Decisore,https://linkedin.com/in/davehutton,https://www.cissoid.com/company/the-cissoid-team,alta,sì (sito + LinkedIn),
+CISSOID,Pierre Delatte,CTO e co-founder,Decisore tecnico,https://linkedin.com/in/pierre-delatte-7b675751,https://www.cissoid.com/company/the-cissoid-team,alta,sì (sito + LinkedIn),
+CISSOID,Etienne Vanzieleghem,VP Engineering & Operations,Decisore tecnico,https://linkedin.com/in/etienne-vanzieleghem-1511385,https://www.cissoid.com/company/the-cissoid-team,alta,sì (sito + LinkedIn),
+CISSOID,Emmanuel Poli,VP Sales,Commerciale/partnership,,https://www.cissoid.com/company/the-cissoid-team,alta,sì (sito),Profilo LinkedIn non restituito
+CISSOID,Mike Sandyck,"Marketing Director (piattaforme inverter, partner)",Partnership,https://linkedin.com/in/mike-sandyck,https://www.cissoid.com/company/the-cissoid-team,alta,sì (sito + LinkedIn),
+CISSOID,Imad Owaineh,"Business Development Manager (partnership, nuovi prodotti)",Partnership,https://linkedin.com/in/imad-owaineh-22a56313,https://linkedin.com/in/imad-owaineh-22a56313,alta,sì (LinkedIn),
+CISSOID,Rupert Burbidge,"Senior Packaging Engineer (moduli, termica)",Valutatore tecnico,https://linkedin.com/in/rupert-burbidge-1741045b,https://linkedin.com/in/rupert-burbidge-1741045b,alta,sì (LinkedIn),
+CISSOID,David Vandenbruaene,Project Manager / Electronics Design Engineer,Utente,https://linkedin.com/in/david-vandenbruaene-49697745,https://linkedin.com/in/david-vandenbruaene-49697745,alta,sì (LinkedIn),
+Elaphe,Gorazd Gotovac,CEO (da set 2025) e CTO; PhD su modello termico dinamico di motori PM,Decisore + champion,https://linkedin.com/in/gorazdgotovac,https://in-wheel.com/en/about/,alta,sì (sito + LinkedIn),Tesi di dottorato proprio sul tema termico
+Elaphe,Jože Buh,Head of Research and Development,Decisore tecnico,https://linkedin.com/in/jozebuh,https://linkedin.com/in/jozebuh,alta,sì (LinkedIn),
+Elaphe,Jurij Kern,Head of Product,Product,,https://in-wheel.com/en/about/,alta,sì (sito),URL profilo non restituito; esiste un suo post LinkedIn
+Elaphe,Blaž Grafenauer,Head of System Engineering,Valutatore tecnico,,https://in-wheel.com/en/about/,alta,sì (sito),Profilo LinkedIn non cercato/restituito
+Elaphe,Tomaž Kompara,Vehicle Motion Control Lead,Utente,,https://in-wheel.com/en/about/,alta,sì (sito),
+Elaphe,Blaž Modic,"Technical lead, powertrain electronics (controller motore)",Champion,https://linkedin.com/in/blazmodic,https://linkedin.com/in/blazmodic,alta,sì (LinkedIn),
+Elaphe,Martin Strojnik,Head of active part development (motore),Valutatore tecnico,https://linkedin.com/in/martin-strojnik-64a425195,https://linkedin.com/in/martin-strojnik-64a425195,alta,sì (LinkedIn),
+Elaphe,Miha Škof,"Senior CAE Specialist (termico, CFD, riscaldamento motore)",Valutatore tecnico,https://linkedin.com/in/miha-%C5%A1kof-198b42b1,https://linkedin.com/in/miha-%C5%A1kof-198b42b1,alta,sì (LinkedIn),
+Elaphe,Andraž Lipanje,Electromagnetic design FEM 2D/3D,Utente,https://linkedin.com/in/andra%C5%BE-lipanje-3a7498195,https://linkedin.com/in/andra%C5%BE-lipanje-3a7498195,media,parziale (solo sintesi),
+Elaphe,Aleš Vlaj,Head of Mechanical Design,Utente,https://linkedin.com/in/ales-vlaj-a59149135,https://linkedin.com/in/ales-vlaj-a59149135,alta,sì (LinkedIn),
