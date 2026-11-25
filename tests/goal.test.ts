@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { dailyGoal } from '../lib/goal'
+import { dailyGoal, dailyGoalLine } from '../lib/goal'
 
 describe('daily goal', () => {
   it('counts down to 10 with a phrase for each step', () => {
@@ -27,5 +27,13 @@ describe('daily goal', () => {
     expect(dailyGoal(14).number).toBe(14)
     expect(dailyGoal(14).phrase).toBe(dailyGoal(10).phrase)
     expect(dailyGoal(14).progress).toBe(1)
+  })
+
+  it('writes the same phrases as one context line with the score', () => {
+    expect(dailyGoalLine(0)).toBe('Let’s warm up ☕ · 0/10 today')
+    expect(dailyGoalLine(2)).toBe('8 to complete your streak 🔥 · 2/10 today')
+    expect(dailyGoalLine(3)).toBe('7 to get into goat mode 🐐 · 3/10 today')
+    expect(dailyGoalLine(10)).toBe('Goat mode: ON 🐐 · 10/10 today')
+    expect(dailyGoalLine(12)).toBe('Goat mode: ON 🐐 · 12/10 today')
   })
 })

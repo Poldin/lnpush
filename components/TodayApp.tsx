@@ -15,7 +15,7 @@ import {
   type CompanyFilter,
 } from '../lib/companies'
 import { todayIso } from '../lib/dates'
-import { DAILY_GOAL, dailyGoal } from '../lib/goal'
+import { DAILY_GOAL, dailyGoal, dailyGoalLine } from '../lib/goal'
 import { openingChart, smoothCurve, type ChartRange } from '../lib/openingChart'
 import { sortListCards } from '../lib/listOrder'
 import { createBrowserSupabase } from '../lib/supabase/browser'
@@ -769,9 +769,7 @@ function SlackPreview({
             <time>{time}</time>
           </p>
           <p className="slack-header">Your LinkedIn cards for today</p>
-          <p className="slack-context">
-            {today}/{DAILY_GOAL} today
-          </p>
+          <p className="slack-context">{dailyGoalLine(today)}</p>
           {error ? <p className="slack-context">The list cannot be loaded right now.</p> : null}
           {loading ? <p className="slack-context">Loading cards…</p> : null}
           {!loading && !error && cards.length === 0 ? <p className="slack-context">No cards for today.</p> : null}

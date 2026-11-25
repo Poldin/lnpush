@@ -42,3 +42,10 @@ export function dailyGoal(openedToday: number): DailyGoalView {
     complete: false,
   }
 }
+
+export function dailyGoalLine(openedToday: number): string {
+  const view = dailyGoal(openedToday)
+  const opened = Math.max(0, Math.floor(openedToday))
+  const phrase = !view.complete && view.phrase.startsWith('to ') ? `${view.number} ${view.phrase}` : view.phrase
+  return `${phrase} · ${opened}/${DAILY_GOAL} today`
+}
