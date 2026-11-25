@@ -16,6 +16,7 @@ import {
 } from '../lib/companies'
 import { todayIso } from '../lib/dates'
 import { DAILY_GOAL, dailyGoal } from '../lib/goal'
+import { openingChart, type ChartBar, type ChartRange } from '../lib/openingChart'
 import { sortListCards } from '../lib/listOrder'
 import { createBrowserSupabase } from '../lib/supabase/browser'
 import { gestureCountsAsTap, nextTabFromSwipe } from '../lib/swipe'
@@ -366,6 +367,7 @@ function confirmOpen(card: CardView) {
         usageError || usage?.unavailable ? (
           <UsagePanel
             unavailable
+            timeZone={timezone}
             counts={{ today: 0, week: 0, month: 0, total: 0 }}
             team={null}
             recent={[]}
@@ -377,6 +379,7 @@ function confirmOpen(card: CardView) {
         ) : mine ? (
           <UsagePanel
             unavailable={false}
+            timeZone={timezone}
             counts={mine.counts}
             team={usage?.team ?? null}
             recent={mine.recent}
@@ -699,6 +702,42 @@ function SeeLinkFace({ label }: { label: string }) {
   )
 }
 
+function OpeningChart({ bars }: { bars: ChartBar[] }) {
+  const [active, setActive] = useState<string | null>(bars.at(-1)?.key ?? null)
+  const selected = bars.find((bar) => bar.key === active) ?? bars.at(-1) ?? null
+  if (bars.length === 0) return <p className="chart-empty">No openings yet.</p>
+  const max = Math.max(1, ...bars.map((bar) => bar.count))
+  const width = 320
+  const height = 78
+  const gap = bars.length > 14 ? 2 : 4
+  const barWidth = (width - gap * (bars.length - 1)) / bars.length
+  const showLabels = bars.length <= 7
+  return (
+    <figure className="opening-chart">
+      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Openings over time">
+        {bars.map((bar, index) => {
+          const barHeight = bar.count === 0 ? 2 : Math.max(4, (bar.count / max) * (height - 18))
+          const x = index * (barWidth + gap)
+          const y = height - (showLabels ? 16 : 4) - barHeight
+          const on = selected?.key === bar.key
+          return (
+            <g key={bar.key} onClick={() => setActive(bar.key)}>
+              <title>{`${bar.label}: ${bar.count}`}</title>
+              <rect x={x} y={y} width={barWidth} height={barHeight} rx="1.5" fill={on ? '#fff' : '#8d8d93'} />
+              {showLabels ? (
+                <text x={x + barWidth / 2} y={height - 2} textAnchor="middle" fontSize="9" fill="#d4d4d8">
+                  {bar.label}
+                </text>
+              ) : null}
+            </g>
+          )
+        })}
+      </svg>
+      <figcaption>{selected ? `${selected.label} · ${selected.count}` : 'No openings in this range.'}</figcaption>
+    </figure>
+  )
+}
+
 function TeamBadges({ team }: { team: NonNullable<UsageView['team']> }) {
   return (
     <div className="team-badges">
@@ -785,6 +824,7 @@ function Board({
 
 function UsagePanel({
   unavailable,
+  timeZone,
   counts,
   team,
   recent,
@@ -794,6 +834,7 @@ function UsagePanel({
   onKeyOpen,
 }: {
   unavailable: boolean
+  timeZone: string
   counts: UsageCounts
   team: UsageView['team']
   recent: UsageView['recent']
@@ -802,6 +843,7 @@ function UsagePanel({
   onOpen: (url: string) => void
   onKeyOpen: (url: string) => void
 }) {
+  const [range, setRange] = useState<ChartRange>('week')
   if (unavailable) {
     return (
       <section className="card" id="lista">
@@ -812,20 +854,28 @@ function UsagePanel({
   }
   return (
     <section id="lista" aria-labelledby="utilizzo-title">
-      <dl className="stats stats-plain">
-        <div>
-          <dt>7 days</dt>
-          <dd>{counts.week}</dd>
-        </div>
-        <div>
-          <dt>30 days</dt>
-          <dd>{counts.month}</dd>
-        </div>
-        <div>
-          <dt>Total</dt>
-          <dd>{counts.total}</dd>
-        </div>
-        </dl>
+      <div className="stats stats-plain" role="tablist" aria-label="Your openings over time">
+        {(
+          [
+            ['week', '7 days', counts.week],
+            ['month', '30 days', counts.month],
+            ['all', 'Total', counts.total],
+          ] as const
+        ).map(([value, label, count]) => (
+          <button
+            key={value}
+            className={range === value ? 'stat on' : 'stat'}
+            type="button"
+            role="tab"
+            aria-selected={range === value}
+            onClick={() => setRange(value)}
+          >
+            <span className="stat-label">{label}</span>
+            <span className="stat-value">{count}</span>
+          </button>
+        ))}
+      </div>
+      <OpeningChart bars={openingChart(recent.map((item) => item.clickedAt), range, timeZone)} />
       {team ? <TeamBadges team={team} /> : null}
       {team ? <Leaderboards team={team} /> : null}
       <h1 className="list-title" id="utilizzo-title">
