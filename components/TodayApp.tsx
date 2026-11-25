@@ -738,12 +738,7 @@ function OpeningChart({ counts }: { counts: number[] }) {
   return (
     <div className="opening-chart" aria-hidden="true">
       <svg viewBox="0 0 320 72">
-        {curve ? (
-          <>
-            <path d={curve.area} fill="#fff" opacity="0.12" />
-            <path d={curve.line} fill="none" stroke="#fff" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
-          </>
-        ) : null}
+        {curve ? <path d={curve.line} fill="none" stroke="#3a3a40" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" /> : null}
       </svg>
     </div>
   )
