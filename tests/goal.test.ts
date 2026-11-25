@@ -20,7 +20,7 @@ describe('daily goal', () => {
     expect(dailyGoal(10)).toEqual({
       emoji: '🐐',
       number: 10,
-      phrase: 'Goat mode: ON 🐐 Every extra one is a bonus',
+      phrase: 'Goat mode: ON 🐐',
       progress: 1,
       complete: true,
     })

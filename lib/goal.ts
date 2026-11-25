@@ -27,7 +27,7 @@ export function dailyGoal(openedToday: number): DailyGoalView {
     return {
       emoji: '🐐',
       number: opened,
-      phrase: 'Goat mode: ON 🐐 Every extra one is a bonus',
+      phrase: 'Goat mode: ON 🐐',
       progress: 1,
       complete: true,
     }
