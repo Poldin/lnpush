@@ -8,8 +8,13 @@ function redirectTarget(path: string, request: NextRequest) {
   const tab = request.nextUrl.searchParams.get('tab')
   const destination = new URL(withTab(path, tab), request.url)
   destination.searchParams.delete('aziende')
-  for (const company of request.nextUrl.searchParams.getAll('aziende')) {
-    if (company.trim()) destination.searchParams.append('aziende', company.trim())
+  destination.searchParams.delete('companies')
+  const companies = [
+    ...request.nextUrl.searchParams.getAll('aziende'),
+    ...request.nextUrl.searchParams.getAll('companies'),
+  ]
+  for (const company of companies) {
+    if (company.trim()) destination.searchParams.append('companies', company.trim())
   }
   return destination
 }

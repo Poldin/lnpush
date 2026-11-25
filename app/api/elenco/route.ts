@@ -11,12 +11,12 @@ export async function GET() {
   try {
     const supabase = await createServerSupabase()
     const { data } = await supabase.auth.getUser()
-    if (!data.user) return NextResponse.json({ error: 'Accesso richiesto.' }, { status: 401 })
+    if (!data.user) return NextResponse.json({ error: 'Sign-in required.' }, { status: 401 })
 
     const config = loadConfigFile()
     const roster = await loadRoster(supabase, config.technicalGroupPattern)
     const member = memberForUser(roster.teamRows, data.user)
-    if (!member) return NextResponse.json({ error: 'Email non nel team.' }, { status: 403 })
+    if (!member) return NextResponse.json({ error: 'This email is not on the team.' }, { status: 403 })
 
     const plan = buildTodayPlan(
       { contacts: roster.contacts, team: roster.team, config, clicks: roster.clicks },
@@ -43,7 +43,7 @@ export async function GET() {
       companies,
     })
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Elenco non disponibile.'
+    const message = error instanceof Error ? error.message : 'The list is unavailable.'
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }

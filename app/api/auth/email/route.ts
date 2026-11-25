@@ -14,14 +14,14 @@ export async function POST(request: Request) {
     email = ''
   }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 200) {
-    return NextResponse.json({ error: 'Inserisci un’email valida.' }, { status: 400 })
+    return NextResponse.json({ error: 'Enter a valid email.' }, { status: 400 })
   }
 
   try {
     const supabase = await createServerSupabase()
     const allowed = await emailIsOnTeam(supabase, email)
     if (!allowed) {
-      return NextResponse.json({ error: 'Questa email non è nel team.' }, { status: 403 })
+      return NextResponse.json({ error: 'This email is not on the team.' }, { status: 403 })
     }
     return NextResponse.json({ ok: true })
   } catch (error) {

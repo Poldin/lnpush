@@ -94,7 +94,7 @@ export function toOpening(
 ): OwnOpening {
   return {
     contactId: click.contactId,
-    contactName: click.contactName || 'Profilo',
+    contactName: click.contactName || 'Profile',
     role: click.role,
     company: click.company,
     linkedinUrl: click.linkedinUrl ?? '',
@@ -106,7 +106,7 @@ export function toOpening(
 export function formatRomeDateTime(iso: string, timeZone: string): string {
   const date = new Date(iso)
   if (Number.isNaN(date.getTime())) return ''
-  return new Intl.DateTimeFormat('it-IT', {
+  return new Intl.DateTimeFormat('en-GB', {
     timeZone,
     day: 'numeric',
     month: 'short',

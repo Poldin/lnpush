@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic'
 export default async function Page({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string; aziende?: string | string[] }>
+  searchParams: Promise<{ tab?: string; aziende?: string | string[]; companies?: string | string[] }>
 }) {
   const params = await searchParams
   try {
@@ -26,11 +26,11 @@ export default async function Page({
     if (!member) {
       return (
         <main className="wrap">
-          <h1 className="plain-title">Email non nel team</h1>
-          <p className="lede">Questo accesso non corrisponde a una persona attiva del team.</p>
+          <h1 className="plain-title">Email is not on the team</h1>
+          <p className="lede">This sign-in does not match an active team member.</p>
           <form action="/api/logout" method="post">
             <button className="primary center" type="submit">
-              Esci
+              Sign out
             </button>
           </form>
         </main>
@@ -45,15 +45,15 @@ export default async function Page({
         timezone={config.timezone}
         isoDate={todayIso(config.timezone)}
         initialTab={parseTab(params.tab)}
-        initialCompanies={parseCompanies(params.aziende)}
+        initialCompanies={parseCompanies(params.aziende, params.companies)}
       />
     )
   } catch (error) {
     unstable_rethrow(error)
-    const message = error instanceof Error ? error.message : 'Controlla la configurazione.'
+    const message = error instanceof Error ? error.message : 'Check the configuration.'
     return (
       <main className="wrap">
-        <h1 className="plain-title">Controlla i dati</h1>
+        <h1 className="plain-title">Check the data</h1>
         <p className="tip">{message}</p>
       </main>
     )
