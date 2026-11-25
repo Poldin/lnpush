@@ -14,18 +14,18 @@ export async function POST(request: Request) {
   } catch {
     contactId = ''
   }
-  if (!contactId) return NextResponse.json({ error: 'Contatto mancante.' }, { status: 400 })
+  if (!contactId) return NextResponse.json({ error: 'Missing contact.' }, { status: 400 })
 
   const supabase = await createServerSupabase()
   const { data } = await supabase.auth.getUser()
-  if (!data.user) return NextResponse.json({ error: 'Accesso richiesto.' }, { status: 401 })
+  if (!data.user) return NextResponse.json({ error: 'Sign-in required.' }, { status: 401 })
 
   const config = loadConfigFile()
   const roster = await loadRoster(supabase, config.technicalGroupPattern)
   const member = memberForUser(roster.teamRows, data.user)
-  if (!member) return NextResponse.json({ error: 'Email non nel team.' }, { status: 403 })
+  if (!member) return NextResponse.json({ error: 'This email is not on the team.' }, { status: 403 })
 
   const { error } = await supabase.from('clicks').insert({ team_member_id: member.id, contact_id: contactId })
-  if (error) return NextResponse.json({ error: 'Registrazione non riuscita.' }, { status: 400 })
+  if (error) return NextResponse.json({ error: 'Could not save the opening.' }, { status: 400 })
   return NextResponse.json({ ok: true })
 }

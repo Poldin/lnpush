@@ -82,12 +82,17 @@ describe('own openings', () => {
 })
 
 describe('tab query', () => {
-  it('defaults to elenco and keeps a chosen tab on the next URL', () => {
+  it('keeps the old tab names and writes the English ones', () => {
     expect(parseTab(null)).toBe('elenco')
     expect(parseTab('altro')).toBe('elenco')
+    expect(parseTab('list')).toBe('elenco')
+    expect(parseTab('elenco')).toBe('elenco')
     expect(parseTab('utilizzo')).toBe('utilizzo')
-    expect(withTab('/', 'utilizzo')).toBe('/?tab=utilizzo')
-    expect(withTab('/login?errore=link', 'elenco')).toBe('/login?errore=link&tab=elenco')
+    expect(parseTab('activity')).toBe('utilizzo')
+    expect(withTab('/', 'utilizzo')).toBe('/?tab=activity')
+    expect(withTab('/', 'activity')).toBe('/?tab=activity')
+    expect(withTab('/login?error=link', 'elenco')).toBe('/login?error=link&tab=list')
+    expect(withTab('/login?errore=link', 'list')).toBe('/login?errore=link&tab=list')
     expect(withTab('/', null)).toBe('/')
   })
 })

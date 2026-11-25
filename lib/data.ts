@@ -3,7 +3,7 @@ import path from 'node:path'
 
 import { clickIndex, planAssignments, queueForMember } from './assignment'
 import { assertPattern } from './classify'
-import { isIsoDate, splitItalianDate, todayIso } from './dates'
+import { isIsoDate, splitDate, todayIso } from './dates'
 import type { CardView, ContactLabel, Dataset, HomeView, Plan, PlanConfig } from './types'
 
 const DEFAULTS = {
@@ -23,7 +23,7 @@ export function loadConfigFile(): PlanConfig {
 
 export function buildTodayPlan(dataset: Dataset, isoDate = todayIso(dataset.config.timezone)): Plan {
   const { contacts, team, config } = dataset
-  const dateParts = splitItalianDate(isoDate)
+  const dateParts = splitDate(isoDate)
   const beforeStart = isoDate < config.startDate
   const todays = beforeStart
     ? []
@@ -57,7 +57,7 @@ export function buildTodayPlan(dataset: Dataset, isoDate = todayIso(dataset.conf
     day: dateParts.day,
     monthYear: dateParts.monthYear,
     beforeStart,
-    startLabel: splitItalianDate(config.startDate).full,
+    startLabel: splitDate(config.startDate).full,
     cooldownDays: config.cooldownDays,
     maxMembersPerContact: config.maxMembersPerContact,
     members: team.map((member) => ({ id: member.id, name: member.name })),
@@ -103,7 +103,7 @@ export function homeForMember(
 }
 
 function loadConfig(raw: unknown): PlanConfig {
-  const record = asRecord(raw, 'config.json deve essere un oggetto.')
+  const record = asRecord(raw, 'config.json must be an object.')
   const config: PlanConfig = {
     cardsPerDay: integer(record.cardsPerDay, 'cardsPerDay', 1, 30, DEFAULTS.cardsPerDay),
     cooldownDays: integer(record.cooldownDays, 'cooldownDays', 0, 365, DEFAULTS.cooldownDays),
@@ -117,7 +117,7 @@ function loadConfig(raw: unknown): PlanConfig {
       typeof record.followGroupPattern === 'string' ? record.followGroupPattern : DEFAULTS.followGroupPattern,
   }
   if (!isIsoDate(config.startDate)) {
-    throw new Error('startDate non è valida. Usa il formato YYYY-MM-DD.')
+    throw new Error('startDate is invalid. Use YYYY-MM-DD.')
   }
   assertPattern(config.technicalGroupPattern, 'technicalGroupPattern')
   assertPattern(config.followGroupPattern, 'followGroupPattern')
@@ -128,14 +128,14 @@ function loadConfig(raw: unknown): PlanConfig {
 function integer(value: unknown, label: string, min: number, max: number, fallback: number): number {
   if (value === undefined) return fallback
   if (typeof value !== 'number' || !Number.isInteger(value) || value < min || value > max) {
-    throw new Error(`${label} deve essere un intero tra ${min} e ${max}.`)
+    throw new Error(`${label} must be an integer between ${min} and ${max}.`)
   }
   return value
 }
 
 function boolean(value: unknown, label: string, fallback: boolean): boolean {
   if (value === undefined) return fallback
-  if (typeof value !== 'boolean') throw new Error(`${label} deve essere true o false.`)
+  if (typeof value !== 'boolean') throw new Error(`${label} must be true or false.`)
   return value
 }
 
@@ -149,6 +149,6 @@ function readJson(file: string): unknown {
     return JSON.parse(readFileSync(file, 'utf8'))
   } catch (error) {
     if (error instanceof Error && error.message.startsWith('File mancante')) throw error
-    throw new Error(`Impossibile leggere data/${path.basename(file)}. Controlla che sia JSON valido.`)
+    throw new Error(`Could not read data/${path.basename(file)}. Check that it is valid JSON.`)
   }
 }

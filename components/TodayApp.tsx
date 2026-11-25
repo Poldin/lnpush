@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, type TouchEvent } from 'react'
+import { useEffect, useRef, useState, type ReactNode, type TouchEvent } from 'react'
 import { useRouter } from 'next/navigation'
 
 import {
@@ -15,8 +15,8 @@ import {
 } from '../lib/companies'
 import { todayIso } from '../lib/dates'
 import { createBrowserSupabase } from '../lib/supabase/browser'
-import { nextTabFromSwipe } from '../lib/swipe'
-import type { AppTab } from '../lib/tabs'
+import { gestureCountsAsTap, nextTabFromSwipe } from '../lib/swipe'
+import { tabQuery, type AppTab } from '../lib/tabs'
 import { applyOpening, toOpening } from '../lib/usage'
 import type { CardView, ContactLabel, HomeView, UsageCounts, UsageView } from '../lib/types'
 
@@ -42,6 +42,7 @@ export function TodayApp({
   const [companyQuery, setCompanyQuery] = useState('')
   const [filterOpen, setFilterOpen] = useState(false)
   const swipeStart = useRef<{ x: number; y: number } | null>(null)
+  const ignoreClick = useRef(false)
   const [shownCount, setShownCount] = useState(20)
   const [usageShown, setUsageShown] = useState(10)
   const [elenco, setElenco] = useState<HomeView | null>(null)
@@ -97,15 +98,15 @@ export function TodayApp({
     const code = 'code' in error ? String(error.code) : ''
     setPasskeyMessage(
       code === 'passkey_disabled'
-        ? 'I passkey non sono ancora attivi sul progetto Supabase.'
-        : 'Registrazione annullata o non riuscita.',
+        ? 'Passkeys are not enabled on the Supabase project yet.'
+        : 'Saving was cancelled or failed.',
     )
   }
 
   function writeUrl(nextTab: AppTab, filter: CompanyFilter) {
     const params = new URLSearchParams()
-    params.set('tab', nextTab)
-    for (const company of companyFilterParams(filter)) params.append('aziende', company)
+    params.set('tab', tabQuery(nextTab))
+    for (const company of companyFilterParams(filter)) params.append('companies', company)
     router.replace(`/?${params.toString()}`, { scroll: false })
   }
 
@@ -122,6 +123,7 @@ export function TodayApp({
   }
 
   function onTouchStart(event: TouchEvent) {
+    ignoreClick.current = false
     if (filterOpen || event.touches.length !== 1) {
       swipeStart.current = null
       return
@@ -135,8 +137,35 @@ export function TodayApp({
     swipeStart.current = null
     const touch = event.changedTouches[0]
     if (!start || !touch || filterOpen) return
-    const next = nextTabFromSwipe(tab, touch.clientX - start.x, touch.clientY - start.y, filterOpen)
+    const dx = touch.clientX - start.x
+    const dy = touch.clientY - start.y
+    if (!gestureCountsAsTap(dx, dy)) {
+      ignoreClick.current = true
+      window.setTimeout(() => {
+        ignoreClick.current = false
+      }, 500)
+    }
+    const next = nextTabFromSwipe(tab, dx, dy, filterOpen)
     if (next) selectTab(next)
+  }
+
+  function consumeTap() {
+    if (!ignoreClick.current) return true
+    ignoreClick.current = false
+    return false
+  }
+
+  function openInNewTab(url: string) {
+    window.open(url, '_blank', 'noopener,noreferrer')
+  }
+
+  function activateListCard(card: CardView) {
+    if (armedId !== card.id) {
+      arm(card.id)
+      return
+    }
+    openInNewTab(card.linkedinUrl)
+    confirmOpen(card)
   }
 
   useEffect(() => {
@@ -208,7 +237,7 @@ export function TodayApp({
     const opening = toOpening(
       {
         contactId,
-        contactName: label?.name ?? known?.name ?? 'Profilo',
+        contactName: label?.name ?? known?.name ?? 'Profile',
         role: label?.role ?? known?.role ?? '',
         company: label?.company ?? known?.company ?? '',
         linkedinUrl: label?.linkedinUrl || known?.linkedinUrl || '',
@@ -276,30 +305,38 @@ export function TodayApp({
   return (
     <main className="wrap" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} onTouchCancel={() => (swipeStart.current = null)}>
       <a className="skip" href="#lista">
-        Vai alla lista
+        Skip to the list
       </a>
       <div className="toolbar">
         <p className="hello">
-          Ciao <strong>{memberName}</strong>
+          Hi <strong>{memberName}</strong>
         </p>
         <form action="/api/logout" method="post">
           <button className="linkish" type="submit">
-            Esci
+            Sign out
           </button>
         </form>
       </div>
-      <div className="tabs" role="tablist" aria-label="Sezioni">
+      <div className="tabs" role="tablist" aria-label="Sections">
         <button className={tab === 'elenco' ? 'tab on' : 'tab'} type="button" role="tab" aria-selected={tab === 'elenco'} onClick={() => selectTab('elenco')}>
-          Elenco
+          List
         </button>
         <button className={tab === 'utilizzo' ? 'tab on' : 'tab'} type="button" role="tab" aria-selected={tab === 'utilizzo'} onClick={() => selectTab('utilizzo')}>
-          Utilizzo
+          Activity
         </button>
       </div>
 
       {tab === 'utilizzo' ? (
         usageError || usage?.unavailable ? (
-          <UsagePanel unavailable counts={{ today: 0, week: 0, total: 0 }} recent={[]} shown={0} onMore={() => undefined} />
+          <UsagePanel
+            unavailable
+            counts={{ today: 0, week: 0, total: 0 }}
+            recent={[]}
+            shown={0}
+            onMore={() => undefined}
+            onOpen={() => undefined}
+            onKeyOpen={() => undefined}
+          />
         ) : mine ? (
           <UsagePanel
             unavailable={false}
@@ -307,6 +344,10 @@ export function TodayApp({
             recent={mine.recent}
             shown={usageShown}
             onMore={() => setUsageShown((current) => current + 10)}
+            onOpen={(url) => {
+              if (consumeTap()) openInNewTab(url)
+            }}
+            onKeyOpen={openInNewTab}
           />
         ) : (
           <UsageSkeleton />
@@ -315,23 +356,23 @@ export function TodayApp({
 
       {tab === 'elenco' && passkey === 'offer' ? (
         <section className="card passkey">
-          <h2 className="name">Questo telefono</h2>
-          <p className="role">Registra l’impronta, il volto o il PIN. I prossimi accessi non chiedono l’email.</p>
+          <h2 className="name">This phone</h2>
+          <p className="role">Save your fingerprint, face, or PIN. Next time you will not need email.</p>
           <button className="primary" type="button" onClick={registerPasskey}>
-            Registra il dispositivo
+            Save this device
           </button>
           <button className="linkish" type="button" onClick={later}>
-            Più tardi
+            Not now
           </button>
           {passkeyMessage ? <p className="status">{passkeyMessage}</p> : null}
         </section>
       ) : null}
-      {tab === 'elenco' && passkey === 'done' ? <p className="status">Dispositivo registrato.</p> : null}
+      {tab === 'elenco' && passkey === 'done' ? <p className="status">Device saved.</p> : null}
 
       {tab === 'elenco' && elencoError ? (
         <section className="card" id="lista">
-          <h2 className="name">Elenco</h2>
-          <p className="role">L’elenco non è leggibile in questo momento.</p>
+          <h2 className="name">List</h2>
+          <p className="role">The list cannot be loaded right now.</p>
         </section>
       ) : null}
 
@@ -339,17 +380,17 @@ export function TodayApp({
 
       {tab === 'elenco' && elenco?.beforeStart ? (
         <section className="card" id="lista">
-          <h2 className="name">Il piano parte il {elenco.startLabel}</h2>
-          <p className="role">Oggi non ci sono profili da aprire.</p>
+          <h2 className="name">The plan starts on {elenco.startLabel}</h2>
+          <p className="role">There are no profiles to open today.</p>
         </section>
       ) : null}
 
       {tab === 'elenco' && elenco && !elenco.beforeStart && visibleCards.length === 0 ? (
         <section className="card" id="lista">
-          <h2 className="name">Oggi la lista è vuota</h2>
+          <h2 className="name">The list is empty today</h2>
           <p className="role">
-            I profili già aperti o già usciti restano in pausa {elenco.cooldownDays} giorni e possono andare al massimo a{' '}
-            {elenco.maxMembersPerContact} persone del team.
+            Opened profiles stay paused for {elenco.cooldownDays} days and can go to at most {elenco.maxMembersPerContact}{' '}
+            people on the team.
           </p>
         </section>
       ) : null}
@@ -371,31 +412,40 @@ export function TodayApp({
 
       {tab === 'elenco' && elenco && !elenco.beforeStart && filteredCards.length === 0 && visibleCards.length > 0 ? (
         <section className="card">
-          <h2 className="name">Nessun profilo</h2>
-          <p className="role">Nessun profilo per le aziende scelte.</p>
+          <h2 className="name">No profiles</h2>
+          <p className="role">No profiles for the selected companies.</p>
         </section>
       ) : null}
 
       {tab === 'elenco' && elenco && !elenco.beforeStart && shownCards.length > 0 ? (
-        <section id="lista" aria-label="Elenco">
+        <section id="lista" aria-label="List">
           <div className="cards">
-            {shownCards.map((card) => (
-              <article className="card profile-card" key={card.id}>
-                <ProfileFacts name={card.name} role={card.role} company={card.company} />
-                <div className="card-action">
-                  <ProfileLink
-                    card={card}
-                    armed={armedId === card.id}
-                    onArm={() => arm(card.id)}
-                    onConfirm={() => confirmOpen(card)}
-                  />
-                </div>
-              </article>
-            ))}
+            {shownCards.map((card) => {
+              const armed = armedId === card.id
+              const company = card.company ? `, ${card.company}` : ''
+              return (
+                <ProfileCard
+                  key={card.id}
+                  armed={armed}
+                  label={armed ? 'Tap again to open' : 'View on'}
+                  ariaLabel={
+                    armed
+                      ? `Tap again to open the LinkedIn profile of ${card.name}${company}`
+                      : `View the LinkedIn profile of ${card.name}${company}`
+                  }
+                  onActivate={() => {
+                    if (consumeTap()) activateListCard(card)
+                  }}
+                  onKeyActivate={() => activateListCard(card)}
+                >
+                  <ProfileFacts name={card.name} role={card.role} company={card.company} />
+                </ProfileCard>
+              )
+            })}
           </div>
           {shownCards.length < filteredCards.length ? (
             <button className="ghost wide more" type="button" onClick={() => setShownCount((current) => current + 20)}>
-              Carica altri
+              Load more
             </button>
           ) : null}
         </section>
@@ -455,18 +505,18 @@ function CompanyFilter({
         type="button"
         aria-haspopup="dialog"
         aria-expanded={open}
-        aria-controls="scelta-aziende"
+        aria-controls="company-picker"
         onClick={onToggleOpen}
       >
         <span>{companyFilterLabel(filter)}</span>
         <span aria-hidden="true">{open ? '–' : '+'}</span>
       </button>
       <dialog
-        id="scelta-aziende"
+        id="company-picker"
         className="company-dialog"
         ref={dialogRef}
         tabIndex={-1}
-        aria-label="Aziende"
+        aria-label="Companies"
         onClose={() => {
           if (ignoreClose.current) {
             ignoreClose.current = false
@@ -482,8 +532,8 @@ function CompanyFilter({
           className="filter-search"
           type="search"
           value={query}
-          placeholder="Cerca azienda"
-          aria-label="Cerca azienda"
+          placeholder="Search companies"
+          aria-label="Search companies"
           onChange={(event) => onQuery(event.target.value)}
         />
         <label className="filter-option">
@@ -493,10 +543,10 @@ function CompanyFilter({
             checked={visibleState === 'all'}
             onChange={onToggleVisible}
           />
-          <span>Seleziona tutte</span>
+          <span>Select all</span>
         </label>
         <div className="filter-list">
-          {choices.length === 0 ? <p className="role">Nessuna azienda trovata.</p> : null}
+          {choices.length === 0 ? <p className="role">No companies found.</p> : null}
           {choices.map((company) => (
             <label className="filter-option" key={company}>
               <input
@@ -513,57 +563,41 @@ function CompanyFilter({
   )
 }
 
-function ProfileLink({
-  card,
+function ProfileCard({
   armed,
-  onArm,
-  onConfirm,
+  label,
+  ariaLabel,
+  onActivate,
+  onKeyActivate,
+  children,
 }: {
-  card: CardView
-  armed: boolean
-  onArm: () => void
-  onConfirm: () => void
+  armed?: boolean
+  label: string
+  ariaLabel: string
+  onActivate: () => void
+  onKeyActivate: () => void
+  children: ReactNode
 }) {
-  const company = card.company ? `, ${card.company}` : ''
   return (
-    <a
-      className={armed ? 'see-link arming' : 'see-link'}
-      href={card.linkedinUrl}
-      target="_blank"
-      rel="noopener noreferrer"
-      referrerPolicy="no-referrer"
-      aria-label={
-        armed
-          ? `Tocca di nuovo per aprire il profilo LinkedIn di ${card.name}${company}`
-          : `Vedi su LinkedIn il profilo di ${card.name}${company}`
-      }
-      onClick={(event) => {
-        if (!armed) {
-          event.preventDefault()
-          onArm()
-          return
-        }
-        onConfirm()
+    <article
+      className={armed ? 'card profile-card arming' : 'card profile-card'}
+      role="button"
+      tabIndex={0}
+      aria-label={ariaLabel}
+      onClick={onActivate}
+      onKeyDown={(event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return
+        event.preventDefault()
+        onKeyActivate()
       }}
     >
-      <SeeLinkFace label={armed ? 'Tocca di nuovo' : 'Vedi su'} />
-    </a>
-  )
-}
-
-function ReopenLink({ name, company, href }: { name: string; company: string; href: string }) {
-  const companyLabel = company ? `, ${company}` : ''
-  return (
-    <a
-      className="see-link"
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      referrerPolicy="no-referrer"
-      aria-label={`Vedi su LinkedIn il profilo di ${name}${companyLabel}`}
-    >
-      <SeeLinkFace label="Vedi su" />
-    </a>
+      {children}
+      <div className="card-action">
+        <span className={armed ? 'see-link arming' : 'see-link'}>
+          <SeeLinkFace label={label} />
+        </span>
+      </div>
+    </article>
   )
 }
 
@@ -583,18 +617,22 @@ function UsagePanel({
   recent,
   shown,
   onMore,
+  onOpen,
+  onKeyOpen,
 }: {
   unavailable: boolean
   counts: UsageCounts
   recent: UsageView['recent']
   shown: number
   onMore: () => void
+  onOpen: (url: string) => void
+  onKeyOpen: (url: string) => void
 }) {
   if (unavailable) {
     return (
       <section className="card" id="lista">
-        <h2 className="name">Utilizzo</h2>
-        <p className="role">Le aperture non sono leggibili in questo momento.</p>
+        <h2 className="name">Activity</h2>
+        <p className="role">Openings cannot be loaded right now.</p>
       </section>
     )
   }
@@ -602,37 +640,49 @@ function UsagePanel({
     <section id="lista" aria-labelledby="utilizzo-title">
       <dl className="stats stats-plain">
         <div>
-          <dt>Oggi</dt>
+          <dt>Today</dt>
           <dd>{counts.today}</dd>
         </div>
         <div>
-          <dt>7 giorni</dt>
+          <dt>7 days</dt>
           <dd>{counts.week}</dd>
         </div>
         <div>
-          <dt>Totale</dt>
+          <dt>Total</dt>
           <dd>{counts.total}</dd>
         </div>
       </dl>
       <h1 className="list-title" id="utilizzo-title">
-        Le tue aperture
+        Your openings
       </h1>
-      {recent.length === 0 ? <p className="role">Nessuna apertura ancora.</p> : null}
+      {recent.length === 0 ? <p className="role">No openings yet.</p> : null}
       <div className="cards">
-        {recent.slice(0, shown).map((item) => (
-          <article className="card profile-card" key={`${item.contactId}-${item.clickedAt}`}>
-            <ProfileFacts name={item.contactName} role={item.role} company={item.company} when={item.whenLabel} />
-            {item.linkedinUrl ? (
-              <div className="card-action">
-                <ReopenLink name={item.contactName} company={item.company} href={item.linkedinUrl} />
-              </div>
-            ) : null}
-          </article>
-        ))}
+        {recent.slice(0, shown).map((item) => {
+          const company = item.company ? `, ${item.company}` : ''
+          const facts = <ProfileFacts name={item.contactName} role={item.role} company={item.company} when={item.whenLabel} />
+          if (!item.linkedinUrl) {
+            return (
+              <article className="card profile-card" key={`${item.contactId}-${item.clickedAt}`}>
+                {facts}
+              </article>
+            )
+          }
+          return (
+            <ProfileCard
+              key={`${item.contactId}-${item.clickedAt}`}
+              label="View on"
+              ariaLabel={`View the LinkedIn profile of ${item.contactName}${company}`}
+              onActivate={() => onOpen(item.linkedinUrl)}
+              onKeyActivate={() => onKeyOpen(item.linkedinUrl)}
+            >
+              {facts}
+            </ProfileCard>
+          )
+        })}
       </div>
       {shown < recent.length ? (
         <button className="ghost wide more" type="button" onClick={onMore}>
-          Carica altri
+          Load more
         </button>
       ) : null}
     </section>

@@ -22,7 +22,7 @@ export function LoginScreen({ sent, errorCode, tab }: { sent: boolean; errorCode
       })
       const body = (await check.json()) as { error?: string }
       if (!check.ok) {
-        setMessage(body.error ?? 'Invio non riuscito.')
+        setMessage(body.error ?? 'Could not send the link.')
         setPending(false)
         return
       }
@@ -35,13 +35,13 @@ export function LoginScreen({ sent, errorCode, tab }: { sent: boolean; errorCode
         },
       })
       if (error) {
-        setMessage('Invio non riuscito. Riprova tra poco.')
+        setMessage('Could not send the link. Try again in a moment.')
         setPending(false)
         return
       }
-      window.location.href = withTab('/login?inviato=1', tab)
+      window.location.href = withTab('/login?sent=1', tab)
     } catch {
-      setMessage('Connessione non riuscita. Riprova.')
+      setMessage('Connection failed. Try again.')
       setPending(false)
     }
   }
@@ -53,13 +53,13 @@ export function LoginScreen({ sent, errorCode, tab }: { sent: boolean; errorCode
       const supabase = createBrowserSupabase()
       const { error } = await supabase.auth.signInWithPasskey()
       if (error) {
-        setMessage('Nessun dispositivo registrato, oppure il passkey non è attivo. Entra con l’email.')
+        setMessage('No device is saved, or passkeys are not enabled. Sign in with email.')
         setPending(false)
         return
       }
       window.location.href = withTab('/', tab)
     } catch {
-      setMessage('Questo browser non apre il dispositivo. Entra con l’email.')
+      setMessage('This browser cannot open the device. Sign in with email.')
       setPending(false)
     }
   }
@@ -67,10 +67,10 @@ export function LoginScreen({ sent, errorCode, tab }: { sent: boolean; errorCode
   return (
     <>
       <button className="primary center" type="button" onClick={signInWithDevice} disabled={pending}>
-        Entra con il dispositivo
+        Sign in with this device
       </button>
       <form className="login" onSubmit={onSubmit}>
-        <label htmlFor="email">Email del team</label>
+        <label htmlFor="email">Team email</label>
         <input
           id="email"
           name="email"
@@ -91,7 +91,7 @@ export function LoginScreen({ sent, errorCode, tab }: { sent: boolean; errorCode
           </p>
         ) : null}
         <button className="ghost wide" type="submit" disabled={pending}>
-          {pending ? 'Attendi…' : 'Invia il link'}
+          {pending ? 'Please wait…' : 'Send the link'}
         </button>
       </form>
     </>
@@ -99,8 +99,8 @@ export function LoginScreen({ sent, errorCode, tab }: { sent: boolean; errorCode
 }
 
 function initialMessage(sent: boolean, errorCode: string): string {
-  if (sent) return 'Controlla la posta e apri il link da questo telefono.'
-  if (errorCode === 'link') return 'Il link non è più valido. Chiedine uno nuovo.'
-  if (errorCode === 'team') return 'Questa email non è nel team.'
+  if (sent) return 'Check your email and open the link on this phone.'
+  if (errorCode === 'link') return 'That link is no longer valid. Ask for a new one.'
+  if (errorCode === 'team') return 'This email is not on the team.'
   return ''
 }

@@ -8,7 +8,7 @@ export function supabasePublicEnv(): { url: string; key: string } | null {
 export function requireSupabaseEnv(): { url: string; key: string } {
   const env = supabasePublicEnv()
   if (!env) {
-    throw new Error('Mancano SUPABASE_URL e SUPABASE_PUBLISHABLE_KEY.')
+    throw new Error('Missing SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY.')
   }
   return env
 }

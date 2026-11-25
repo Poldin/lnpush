@@ -29,7 +29,7 @@ export function eachDate(from: string, to: string): string[] {
   while (cursor <= to) {
     dates.push(cursor)
     if (dates.length > MAX_DAYS) {
-      throw new Error('La data di inizio è troppo lontana. Avvicina startDate in data/config.json.')
+      throw new Error('The start date is too far away. Move startDate closer in data/config.json.')
     }
     cursor = addDays(cursor, 1)
   }
@@ -46,25 +46,25 @@ export function todayIso(timeZone: string, now = new Date()): string {
       day: '2-digit',
     }).formatToParts(now)
   } catch {
-    throw new Error(`Fuso orario non riconosciuto: ${timeZone}. Esempio: Europe/Rome.`)
+    throw new Error(`Unrecognized time zone: ${timeZone}. Example: Europe/Rome.`)
   }
   const year = parts.find((part) => part.type === 'year')?.value
   const month = parts.find((part) => part.type === 'month')?.value
   const day = parts.find((part) => part.type === 'day')?.value
   if (!year || !month || !day) {
-    throw new Error(`Fuso orario non riconosciuto: ${timeZone}. Esempio: Europe/Rome.`)
+    throw new Error(`Unrecognized time zone: ${timeZone}. Example: Europe/Rome.`)
   }
   return `${year}-${month}-${day}`
 }
 
-export function splitItalianDate(iso: string): { weekday: string; day: string; monthYear: string; full: string } {
+export function splitDate(iso: string): { weekday: string; day: string; monthYear: string; full: string } {
   if (!isIsoDate(iso)) {
-    throw new Error(`Data non valida: ${iso}. Usa il formato YYYY-MM-DD.`)
+    throw new Error(`Invalid date: ${iso}. Use YYYY-MM-DD.`)
   }
   const [year, month, day] = iso.split('-').map(Number)
   const date = new Date(Date.UTC(year, month - 1, day))
-  const weekday = new Intl.DateTimeFormat('it-IT', { weekday: 'long', timeZone: 'UTC' }).format(date)
-  const monthName = new Intl.DateTimeFormat('it-IT', { month: 'long', timeZone: 'UTC' }).format(date)
+  const weekday = new Intl.DateTimeFormat('en-GB', { weekday: 'long', timeZone: 'UTC' }).format(date)
+  const monthName = new Intl.DateTimeFormat('en-GB', { month: 'long', timeZone: 'UTC' }).format(date)
   const monthYear = `${monthName} ${year}`
   return {
     weekday,

@@ -21,10 +21,10 @@ export function companyFilterParams(filter: CompanyFilter): string[] {
 }
 
 export function companyFilterLabel(filter: CompanyFilter): string {
-  if (filter.mode === 'all') return 'Tutte le aziende'
-  if (filter.mode === 'none' || filter.picked.length === 0) return 'Nessuna azienda'
-  if (filter.picked.length === 1) return filter.picked[0] ?? 'Nessuna azienda'
-  return `${filter.picked.length} aziende`
+  if (filter.mode === 'all') return 'All companies'
+  if (filter.mode === 'none' || filter.picked.length === 0) return 'No companies'
+  if (filter.picked.length === 1) return filter.picked[0] ?? 'No companies'
+  return `${filter.picked.length} companies`
 }
 
 export function companyIsSelected(filter: CompanyFilter, company: string, all: string[]): boolean {

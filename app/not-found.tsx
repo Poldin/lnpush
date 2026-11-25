@@ -1,11 +1,11 @@
 export default function NotFound() {
   return (
     <main className="wrap">
-      <p className="kicker">Oggi</p>
-      <h1 className="plain-title">Pagina assente</h1>
-      <p className="lede">Torna alla lista del giorno.</p>
+      <p className="kicker">Today</p>
+      <h1 className="plain-title">Page not found</h1>
+      <p className="lede">Go back to today's list.</p>
       <a className="primary center" href="/">
-        Apri la lista
+        Open the list
       </a>
     </main>
   )

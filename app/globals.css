@@ -434,6 +434,14 @@ input:-webkit-autofill {
   padding: 16px;
 }
 
+.profile-card {
+  cursor: pointer;
+}
+
+.profile-card.arming {
+  animation: arm-pulse 0.8s ease-in-out infinite;
+}
+
 .profile-card::before,
 .profile-card::after,
 .card-action::before,
@@ -500,7 +508,38 @@ input:-webkit-autofill {
 }
 
 .see-link.arming {
-  animation: arm-pulse 0.8s ease-in-out infinite;
+  display: flex;
+  width: 100%;
+  position: relative;
+  padding: 2px;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.see-link.arming::before {
+  content: '';
+  position: absolute;
+  inset: -140%;
+  background: conic-gradient(#fff, #3a3a40 25%, #fff 50%, #3a3a40 75%, #fff);
+  animation: spin-border 1.1s linear infinite;
+  pointer-events: none;
+}
+
+.see-link.arming .see-link-hit {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  justify-content: center;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: #16161a;
+  color: #fff;
+}
+
+@keyframes spin-border {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .li-mark {
@@ -682,6 +721,7 @@ input:-webkit-autofill {
 }
 
 .primary:focus-visible,
+.profile-card:focus-visible,
 .see-link:focus-visible,
 .choice:focus-visible,
 .ghost:focus-visible,
@@ -745,8 +785,22 @@ input:focus-visible,
   }
 
   .primary.arming,
-  .see-link.arming {
+  .profile-card.arming,
+  .see-link.arming,
+  .see-link.arming::before {
     animation: none;
+  }
+
+  .see-link.arming {
+    background: #fff;
+    color: #000;
+  }
+
+  .see-link.arming::before {
+    content: none;
+  }
+
+  .see-link.arming .see-link-hit {
     background: #fff;
     color: #000;
   }

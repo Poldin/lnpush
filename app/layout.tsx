@@ -18,9 +18,9 @@ const display = Fraunces({
 })
 
 export const metadata: Metadata = {
-  title: 'Oggi · Newtwen',
-  description: 'I profili LinkedIn di oggi per il team Newtwen.',
-  applicationName: 'Oggi',
+  title: 'Today · Newtwen',
+  description: "Today's LinkedIn profiles for the Newtwen team.",
+  applicationName: 'Today',
   robots: { index: false, follow: false },
   formatDetection: { telephone: false, email: false },
 }
@@ -34,7 +34,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="it" className={display.variable}>
+    <html lang="en" className={display.variable}>
       <body className={sans.className}>{children}</body>
     </html>
   )

@@ -3,7 +3,7 @@ export function assertPattern(pattern: string, label: string): void {
   try {
     new RegExp(pattern, 'i')
   } catch {
-    throw new Error(`${label} non è una espressione regolare valida.`)
+    throw new Error(`${label} is not a valid regular expression.`)
   }
 }
 

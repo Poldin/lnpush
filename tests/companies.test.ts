@@ -8,7 +8,7 @@ import {
   toggleCompanyInFilter,
   toggleVisibleInFilter,
 } from '../lib/companies'
-import { nextTabFromSwipe } from '../lib/swipe'
+import { gestureCountsAsTap, nextTabFromSwipe } from '../lib/swipe'
 
 const all = ['Alfa', 'Beta', 'Gamma']
 
@@ -18,7 +18,9 @@ describe('company filter', () => {
     expect(companyFilterParams({ mode: 'all', picked: [] })).toEqual([])
     expect(readCompanyFilter(['__nessuna__'])).toEqual({ mode: 'none', picked: [] })
     expect(companyFilterParams({ mode: 'none', picked: [] })).toEqual(['__nessuna__'])
-    expect(companyFilterLabel({ mode: 'none', picked: [] })).toBe('Nessuna azienda')
+    expect(companyFilterLabel({ mode: 'none', picked: [] })).toBe('No companies')
+    expect(companyFilterLabel({ mode: 'all', picked: [] })).toBe('All companies')
+    expect(companyFilterLabel({ mode: 'pick', picked: ['Alfa', 'Beta'] })).toBe('2 companies')
   })
 
   it('selects or clears the companies that are visible in the search', () => {
@@ -44,5 +46,12 @@ describe('tab swipe', () => {
     expect(nextTabFromSwipe('elenco', -40, 0, false)).toBeNull()
     expect(nextTabFromSwipe('elenco', -80, 70, false)).toBeNull()
     expect(nextTabFromSwipe('elenco', -120, 10, true)).toBeNull()
+  })
+
+  it('does not treat a horizontal swipe as a tap', () => {
+    expect(gestureCountsAsTap(-80, 10)).toBe(false)
+    expect(gestureCountsAsTap(90, -20)).toBe(false)
+    expect(gestureCountsAsTap(4, 3)).toBe(true)
+    expect(gestureCountsAsTap(0, 40)).toBe(false)
   })
 })
