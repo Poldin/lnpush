@@ -56,7 +56,7 @@ export async function updateSession(request: NextRequest) {
 
   const { data } = await supabase.auth.getUser()
   const path = request.nextUrl.pathname
-  const isPublic = PUBLIC_PATHS.has(path) || path.startsWith('/api/auth/')
+  const isPublic = PUBLIC_PATHS.has(path) || path.startsWith('/api/auth/') || path.startsWith('/api/collect')
   if (!data.user && !isPublic) {
     return NextResponse.redirect(redirectTarget('/login', request))
   }

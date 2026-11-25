@@ -132,3 +132,6 @@ alter publication supabase_realtime add table public.clicks;
 
 -- Settimana calda. SQL da applicare a mano: supabase/hot_weeks.sql
 -- Non è incluso nell'esecuzione di questo file.
+
+-- Candidati raccolti dallo script locale. SQL da applicare a mano: supabase/profile_candidates.sql
+-- Non è incluso nell'esecuzione di questo file.

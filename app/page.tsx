@@ -1,6 +1,7 @@
 import { redirect, unstable_rethrow } from 'next/navigation'
 
 import { TodayApp } from '../components/TodayApp'
+import { isCollectorAdmin } from '../lib/admin'
 import { loadConfigFile } from '../lib/data'
 import { createServerSupabase } from '../lib/supabase/server'
 import { linkMember, loadActiveTeam, memberForUser } from '../lib/supabase/team'
@@ -46,6 +47,7 @@ export default async function Page({
         isoDate={todayIso(config.timezone)}
         initialTab={parseTab(params.tab)}
         initialCompanies={parseCompanies(params.aziende, params.companies)}
+        isAdmin={isCollectorAdmin(member, data.user)}
       />
     )
   } catch (error) {
