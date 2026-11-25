@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { openingChart } from '../lib/openingChart'
+import { openingChart, smoothCurve } from '../lib/openingChart'
 
 const now = new Date('2026-11-24T20:00:00Z')
 
@@ -36,5 +36,13 @@ describe('opening chart', () => {
     expect(openingChart([], 'week', 'Europe/Rome', now).every((bar) => bar.count === 0)).toBe(true)
     expect(openingChart([], 'all', 'Europe/Rome', now)).toEqual([])
     expect(openingChart(['not-a-date'], 'week', 'Europe/Rome', now).every((bar) => bar.count === 0)).toBe(true)
+  })
+
+  it('builds a label-free curve from the bar counts', () => {
+    const curve = smoothCurve([0, 2, 1])
+    expect(curve?.line.startsWith('M ')).toBe(true)
+    expect(curve?.line).toContain(' C ')
+    expect(curve?.area.endsWith('Z')).toBe(true)
+    expect(smoothCurve([])).toBeNull()
   })
 })

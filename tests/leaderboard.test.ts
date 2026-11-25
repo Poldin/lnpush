@@ -25,6 +25,8 @@ describe('team leaderboards', () => {
     const boards = teamBoards(clicks, 'Europe/Rome', now)
     expect(boards.week).toBe(4)
     expect(boards.month).toBe(4)
+    expect(boards.total).toBe(5)
+    expect(boards.times).toHaveLength(5)
     expect(boards.people.all.map((row) => row.contactId)).toEqual(['a', 'b', 'c', 'd'])
     expect(boards.people.week[0]).toMatchObject({ contactId: 'a', name: 'Ada', company: 'Hot', clicks: 2 })
     expect(boards.people.month.map((row) => row.contactId)).toEqual(['a', 'b', 'd'])

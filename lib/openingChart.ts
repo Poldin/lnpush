@@ -44,6 +44,37 @@ function weekBars(days: string[], today: string): ChartBar[] {
   return bars
 }
 
+export function smoothCurve(counts: number[], width = 320, height = 72): { line: string; area: string } | null {
+  if (counts.length === 0) return null
+  const max = Math.max(1, ...counts)
+  const pad = 8
+  const points = counts.map((count, index) => ({
+    x: counts.length === 1 ? width / 2 : (index / (counts.length - 1)) * width,
+    y: pad + (1 - count / max) * (height - pad * 2),
+  }))
+  const line = smoothPath(points, width)
+  const last = points[points.length - 1]
+  const first = points[0]
+  return { line, area: `${line} L ${last.x} ${height} L ${first.x} ${height} Z` }
+}
+
+function smoothPath(points: { x: number; y: number }[], width: number): string {
+  if (points.length === 1) return `M 0 ${points[0].y} L ${width} ${points[0].y}`
+  let path = `M ${points[0].x} ${points[0].y}`
+  for (let index = 0; index < points.length - 1; index += 1) {
+    const previous = points[index - 1] ?? points[index]
+    const current = points[index]
+    const next = points[index + 1]
+    const after = points[index + 2] ?? next
+    const control1x = current.x + (next.x - previous.x) / 6
+    const control1y = current.y + (next.y - previous.y) / 6
+    const control2x = next.x - (after.x - current.x) / 6
+    const control2y = next.y - (after.y - current.y) / 6
+    path += ` C ${control1x} ${control1y} ${control2x} ${control2y} ${next.x} ${next.y}`
+  }
+  return path
+}
+
 function romeDay(value: string, timeZone: string): string | null {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return null
