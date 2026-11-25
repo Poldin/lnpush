@@ -41,6 +41,7 @@ export type CardView = {
   linkedinUrl: string
   hot?: boolean
   refresh?: boolean
+  cooled?: boolean
   clickTimes?: string[]
 }
 

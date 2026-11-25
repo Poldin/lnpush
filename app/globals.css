@@ -346,9 +346,147 @@ input:-webkit-autofill {
 
 .tabs {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr auto;
   gap: 8px;
   margin: 0 0 16px;
+}
+
+.tab.icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  padding: 8px;
+}
+
+.slack-home {
+  margin: 0 0 16px;
+  padding: 12px 12px 8px;
+  border-radius: 8px;
+  background: #1a1d21;
+  color: #d1d2d3;
+  font-family: var(--font-lato), Lato, 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+
+.slack-message {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.slack-avatar {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 4px;
+  background: #4a154b;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.slack-body {
+  min-width: 0;
+  flex: 1;
+}
+
+.slack-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.slack-app-name {
+  color: #fff;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.slack-app {
+  padding: 1px 4px;
+  border-radius: 2px;
+  background: #35373b;
+  color: #d1d2d3;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.slack-meta time {
+  color: #ababad;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.slack-header {
+  margin: 8px 0 0;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.slack-context {
+  margin: 2px 0 0;
+  color: #ababad;
+  font-size: 13px;
+}
+
+.slack-rest {
+  font-style: italic;
+}
+
+.slack-section {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.slack-copy {
+  min-width: 0;
+}
+
+.slack-name {
+  margin: 0;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 900;
+  overflow-wrap: anywhere;
+}
+
+.slack-fields {
+  margin: 2px 0 0;
+  font-size: 14px;
+}
+
+.slack-button {
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 4px;
+  background: #007a5a;
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.slack-button:active {
+  background: #006646;
+}
+
+.slack-divider {
+  margin: 10px 0 0;
+  border: 0;
+  border-top: 1px solid #35373b;
 }
 
 .tab {
