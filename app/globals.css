@@ -514,10 +514,6 @@ input:-webkit-autofill {
   cursor: pointer;
 }
 
-.profile-card.arming {
-  animation: arm-pulse 0.8s ease-in-out infinite;
-}
-
 .profile-card::before,
 .profile-card::after,
 .card-action::before,
@@ -861,7 +857,6 @@ input:focus-visible,
   }
 
   .primary.arming,
-  .profile-card.arming,
   .see-link.arming,
   .see-link.arming::before {
     animation: none;

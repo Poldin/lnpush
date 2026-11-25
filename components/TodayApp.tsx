@@ -582,7 +582,7 @@ function ProfileCard({
 }) {
   return (
     <article
-      className={armed ? 'card profile-card arming' : 'card profile-card'}
+      className="card profile-card"
       role="button"
       tabIndex={0}
       aria-label={ariaLabel}
