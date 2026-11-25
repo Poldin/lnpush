@@ -40,6 +40,7 @@ export type CardView = {
   company: string
   linkedinUrl: string
   hot?: boolean
+  refresh?: boolean
   clickTimes?: string[]
 }
 
