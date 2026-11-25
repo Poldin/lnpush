@@ -1013,6 +1013,131 @@ input:focus-visible,
   font-size: 16px;
 }
 
+.mail-preview {
+  display: none;
+  flex-direction: column;
+  width: min(420px, calc(100vw - 32px));
+  max-height: min(86dvh, 640px);
+  margin: auto;
+  padding: 16px;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  overflow: auto;
+  border: 0;
+  border-radius: 18px;
+  background: #16161a;
+  color: #f4f4f5;
+}
+
+.mail-preview[open] {
+  display: flex;
+}
+
+.mail-preview::backdrop {
+  background: rgb(0 0 0 / 0.62);
+}
+
+.mail-preview:focus {
+  outline: none;
+}
+
+.mail-kicker {
+  margin: 0 0 10px;
+  color: #c4c4c8;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.inbox-row {
+  margin: 0;
+  padding: 12px;
+  border: 1px solid #3a3a40;
+  border-radius: 14px;
+  background: #222228;
+}
+
+.inbox-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.inbox-from,
+.inbox-time,
+.inbox-address,
+.inbox-subject,
+.inbox-snippet {
+  margin: 0;
+}
+
+.inbox-from {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.inbox-time {
+  color: #c4c4c8;
+  font-size: 13px;
+}
+
+.inbox-address {
+  margin-top: 2px;
+  color: #c4c4c8;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.inbox-subject {
+  margin-top: 10px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.inbox-snippet {
+  margin-top: 4px;
+  color: #d4d4d8;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.mail-note {
+  margin: 12px 0 0;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.mail-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.mail-actions .primary,
+.mail-actions .ghost {
+  width: 100%;
+  min-height: 48px;
+  justify-content: center;
+  text-align: center;
+}
+
+.mail-actions .primary {
+  background: #fff;
+  color: #111;
+  border-color: #fff;
+}
+
+.mail-actions .ghost {
+  color: #fff;
+  border-color: #fff;
+}
+
+.mail-actions .linkish {
+  color: #fff;
+}
+
 .alert {
   margin: 12px 0 0;
   color: var(--danger);
