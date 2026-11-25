@@ -13,6 +13,7 @@ export type UsageClick = {
 export type OwnCounts = {
   today: number
   week: number
+  month: number
   total: number
 }
 
@@ -28,11 +29,12 @@ export type OwnOpening = {
 
 export function ownCounts(clicks: UsageClick[], memberId: string, timeZone: string, now = new Date()): OwnCounts {
   const today = todayIso(timeZone, now)
-  const counts: OwnCounts = { today: 0, week: 0, total: 0 }
+  const counts: OwnCounts = { today: 0, week: 0, month: 0, total: 0 }
   for (const click of clicks) {
     if (click.memberId !== memberId || !click.contactId) continue
     counts.total += 1
     const age = daysBetween(todayIso(timeZone, new Date(click.clickedAt)), today)
+    if (age >= 0 && age < 30) counts.month += 1
     if (age >= 0 && age < 7) counts.week += 1
     if (age === 0) counts.today += 1
   }
@@ -66,6 +68,7 @@ export function applyOpening(
     recent,
     counts: {
       total: current.counts.total + 1,
+      month: current.counts.month + (age >= 0 && age < 30 ? 1 : 0),
       week: current.counts.week + (age >= 0 && age < 7 ? 1 : 0),
       today: current.counts.today + (age === 0 ? 1 : 0),
     },

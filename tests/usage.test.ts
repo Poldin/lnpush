@@ -29,6 +29,22 @@ const clicks = [
         company: 'Brusa HyPower',
     clickedAt: '2026-11-20T10:00:00Z',
   },
+  {
+    memberId: 'paolo',
+    contactId: 'older',
+    contactName: 'Older Contact',
+    role: 'CTO',
+    company: 'Acme',
+    clickedAt: '2026-11-04T10:00:00Z',
+  },
+  {
+    memberId: 'paolo',
+    contactId: 'archive',
+    contactName: 'Archive Contact',
+    role: 'CEO',
+    company: 'Archive',
+    clickedAt: '2026-10-01T10:00:00Z',
+  },
 ]
 
 describe('own openings', () => {
@@ -37,9 +53,15 @@ describe('own openings', () => {
     expect(ownCounts(clicks, 'paolo', 'Europe/Rome', new Date('2026-11-24T20:00:00Z'))).toEqual({
       today: 1,
       week: 2,
-      total: 2,
+      month: 3,
+      total: 4,
     })
-    expect(openings.map((item) => item.contactName)).toEqual(['Eleni Nikoloudaki', 'Roland Fromherz'])
+    expect(openings.map((item) => item.contactName)).toEqual([
+      'Eleni Nikoloudaki',
+      'Roland Fromherz',
+      'Older Contact',
+      'Archive Contact',
+    ])
     expect(openings[0]?.whenLabel).toContain('24')
     expect(openings[0]?.company).toBe('Brusa HyPower')
     expect(openings[0]?.linkedinUrl).toBe('https://www.linkedin.com/in/eleni')
@@ -48,7 +70,7 @@ describe('own openings', () => {
   it('does not count the same live opening twice', () => {
     const now = new Date('2026-11-24T20:00:00Z')
     const first = applyOpening(
-      { recent: [], counts: { today: 0, week: 0, total: 0 } },
+      { recent: [], counts: { today: 0, week: 0, month: 0, total: 0 } },
       {
         contactId: 'eleni',
         contactName: 'Eleni Nikoloudaki',
@@ -76,7 +98,7 @@ describe('own openings', () => {
       now,
     )
     expect(merged.recent).toHaveLength(1)
-    expect(merged.counts).toEqual({ today: 1, week: 1, total: 1 })
+    expect(merged.counts).toEqual({ today: 1, week: 1, month: 1, total: 1 })
     expect(merged.recent[0]?.linkedinUrl).toBe('https://www.linkedin.com/in/eleni')
   })
 })

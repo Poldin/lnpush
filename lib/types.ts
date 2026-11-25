@@ -83,6 +83,7 @@ export type UsageRecentView = {
 export type UsageCounts = {
   today: number
   week: number
+  month: number
   total: number
 }
 

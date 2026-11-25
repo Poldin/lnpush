@@ -93,7 +93,7 @@ export async function loadUsage(supabase: SupabaseClient, memberId: string, time
     .eq('team_member_id', memberId)
     .order('clicked_at', { ascending: false })
 
-  if (error) return { unavailable: true, counts: { today: 0, week: 0, total: 0 }, recent: [] }
+  if (error) return { unavailable: true, counts: { today: 0, week: 0, month: 0, total: 0 }, recent: [] }
 
   const clicks: UsageClick[] = []
   for (const row of data ?? []) {
