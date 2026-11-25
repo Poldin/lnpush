@@ -16,7 +16,7 @@ import {
 } from '../lib/companies'
 import { todayIso } from '../lib/dates'
 import { DAILY_GOAL, dailyGoal } from '../lib/goal'
-import { openingChart, type ChartBar, type ChartRange } from '../lib/openingChart'
+import { openingChart, smoothCurve, type ChartRange } from '../lib/openingChart'
 import { sortListCards } from '../lib/listOrder'
 import { createBrowserSupabase } from '../lib/supabase/browser'
 import { gestureCountsAsTap, nextTabFromSwipe } from '../lib/swipe'
@@ -702,47 +702,49 @@ function SeeLinkFace({ label }: { label: string }) {
   )
 }
 
-function OpeningChart({ bars }: { bars: ChartBar[] }) {
-  const [active, setActive] = useState<string | null>(bars.at(-1)?.key ?? null)
-  const selected = bars.find((bar) => bar.key === active) ?? bars.at(-1) ?? null
-  if (bars.length === 0) return <p className="chart-empty">No openings yet.</p>
-  const max = Math.max(1, ...bars.map((bar) => bar.count))
-  const width = 320
-  const height = 78
-  const gap = bars.length > 14 ? 2 : 4
-  const barWidth = (width - gap * (bars.length - 1)) / bars.length
-  const showLabels = bars.length <= 7
+function CounterRow({
+  who,
+  values,
+  selected,
+  onSelect,
+}: {
+  who: string
+  values: readonly (readonly [ChartRange, string, number])[]
+  selected: ChartRange | null
+  onSelect: (range: ChartRange) => void
+}) {
   return (
-    <figure className="opening-chart">
-      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Openings over time">
-        {bars.map((bar, index) => {
-          const barHeight = bar.count === 0 ? 2 : Math.max(4, (bar.count / max) * (height - 18))
-          const x = index * (barWidth + gap)
-          const y = height - (showLabels ? 16 : 4) - barHeight
-          const on = selected?.key === bar.key
-          return (
-            <g key={bar.key} onClick={() => setActive(bar.key)}>
-              <title>{`${bar.label}: ${bar.count}`}</title>
-              <rect x={x} y={y} width={barWidth} height={barHeight} rx="1.5" fill={on ? '#fff' : '#8d8d93'} />
-              {showLabels ? (
-                <text x={x + barWidth / 2} y={height - 2} textAnchor="middle" fontSize="9" fill="#d4d4d8">
-                  {bar.label}
-                </text>
-              ) : null}
-            </g>
-          )
-        })}
-      </svg>
-      <figcaption>{selected ? `${selected.label} · ${selected.count}` : 'No openings in this range.'}</figcaption>
-    </figure>
+    <div className="counter-row">
+      <span className="who-label">{who}</span>
+      {values.map(([value, label, count]) => (
+        <button
+          key={value}
+          className={selected === value ? 'stat on' : 'stat'}
+          type="button"
+          role="tab"
+          aria-selected={selected === value}
+          onClick={() => onSelect(value)}
+        >
+          <span className="stat-label">{label}</span>
+          <span className="stat-value">{count}</span>
+        </button>
+      ))}
+    </div>
   )
 }
 
-function TeamBadges({ team }: { team: NonNullable<UsageView['team']> }) {
+function OpeningChart({ counts }: { counts: number[] }) {
+  const curve = smoothCurve(counts)
   return (
-    <div className="team-badges">
-      <span className="team-badge">Team · 7 days {team.week}</span>
-      <span className="team-badge">Team · 30 days {team.month}</span>
+    <div className="opening-chart" aria-hidden="true">
+      <svg viewBox="0 0 320 72">
+        {curve ? (
+          <>
+            <path d={curve.area} fill="#fff" opacity="0.12" />
+            <path d={curve.line} fill="none" stroke="#fff" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+          </>
+        ) : null}
+      </svg>
     </div>
   )
 }
@@ -843,6 +845,7 @@ function UsagePanel({
   onOpen: (url: string) => void
   onKeyOpen: (url: string) => void
 }) {
+  const [series, setSeries] = useState<'you' | 'team'>('you')
   const [range, setRange] = useState<ChartRange>('week')
   if (unavailable) {
     return (
@@ -854,29 +857,37 @@ function UsagePanel({
   }
   return (
     <section id="lista" aria-labelledby="utilizzo-title">
-      <div className="stats stats-plain" role="tablist" aria-label="Your openings over time">
-        {(
-          [
+      <div className="counter-matrix" role="tablist" aria-label="Openings over time">
+        <CounterRow
+          who="You"
+          selected={series === 'you' ? range : null}
+          values={[
             ['week', '7 days', counts.week],
             ['month', '30 days', counts.month],
             ['all', 'Total', counts.total],
-          ] as const
-        ).map(([value, label, count]) => (
-          <button
-            key={value}
-            className={range === value ? 'stat on' : 'stat'}
-            type="button"
-            role="tab"
-            aria-selected={range === value}
-            onClick={() => setRange(value)}
-          >
-            <span className="stat-label">{label}</span>
-            <span className="stat-value">{count}</span>
-          </button>
-        ))}
+          ]}
+          onSelect={(next) => {
+            setSeries('you')
+            setRange(next)
+          }}
+        />
+        <CounterRow
+          who="Team"
+          selected={series === 'team' ? range : null}
+          values={[
+            ['week', '7 days', team?.week ?? 0],
+            ['month', '30 days', team?.month ?? 0],
+            ['all', 'Total', team?.total ?? 0],
+          ]}
+          onSelect={(next) => {
+            setSeries('team')
+            setRange(next)
+          }}
+        />
       </div>
-      <OpeningChart bars={openingChart(recent.map((item) => item.clickedAt), range, timeZone)} />
-      {team ? <TeamBadges team={team} /> : null}
+      <OpeningChart
+        counts={openingChart(series === 'team' ? (team?.times ?? []) : recent.map((item) => item.clickedAt), range, timeZone).map((bar) => bar.count)}
+      />
       {team ? <Leaderboards team={team} /> : null}
       <h1 className="list-title" id="utilizzo-title">
         Your openings
@@ -972,14 +983,19 @@ function ElencoSkeleton() {
 function UsageSkeleton() {
   return (
     <div aria-hidden="true">
-      <div className="stats stats-plain">
-        <div className="skeleton skeleton-count" />
-        <div className="skeleton skeleton-count" />
-        <div className="skeleton skeleton-count" />
-      </div>
-      <div className="team-badges">
-        <span className="skeleton team-badge-skeleton" />
-        <span className="skeleton team-badge-skeleton" />
+      <div className="counter-matrix">
+        <div className="counter-row">
+          <span className="skeleton who-skeleton" />
+          <span className="skeleton skeleton-count" />
+          <span className="skeleton skeleton-count" />
+          <span className="skeleton skeleton-count" />
+        </div>
+        <div className="counter-row">
+          <span className="skeleton who-skeleton" />
+          <span className="skeleton skeleton-count" />
+          <span className="skeleton skeleton-count" />
+          <span className="skeleton skeleton-count" />
+        </div>
       </div>
       <div className="skeleton skeleton-line title-line" />
       <div className="cards">

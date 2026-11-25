@@ -24,6 +24,8 @@ export type CompanyRank = {
 export type TeamBoards = {
   week: number
   month: number
+  total: number
+  times: string[]
   people: Record<BoardPeriod, PersonRank[]>
   companies: Record<BoardPeriod, CompanyRank[]>
 }
@@ -39,6 +41,8 @@ export function teamBoards(clicks: TeamClick[], timeZone: string, now = new Date
   return {
     week: dated.filter((click) => inPeriod(click.age, 'week')).length,
     month: dated.filter((click) => inPeriod(click.age, 'month')).length,
+    total: dated.length,
+    times: dated.map((click) => click.clickedAt),
     people: {
       week: topPeople(dated, 'week', limit),
       month: topPeople(dated, 'month', limit),
@@ -55,7 +59,7 @@ export function teamBoards(clicks: TeamClick[], timeZone: string, now = new Date
 export function emptyTeamBoards(): TeamBoards {
   const emptyPeople = { week: [], month: [], all: [] }
   const emptyCompanies = { week: [], month: [], all: [] }
-  return { week: 0, month: 0, people: emptyPeople, companies: emptyCompanies }
+  return { week: 0, month: 0, total: 0, times: [], people: emptyPeople, companies: emptyCompanies }
 }
 
 function topPeople(clicks: Array<TeamClick & { age: number }>, period: BoardPeriod, limit: number): PersonRank[] {

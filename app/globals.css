@@ -164,27 +164,30 @@ input:-webkit-autofill {
   font-weight: 700;
 }
 
-.team-badges {
+.counter-matrix {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 8px 0 14px;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0 0 8px;
 }
 
-.team-badge {
-  padding: 4px 10px;
-  border: 1px solid #000;
-  border-radius: 999px;
-  background: #fff;
-  color: #000;
+.counter-row {
+  display: grid;
+  grid-template-columns: 3.4rem repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  align-items: center;
+}
+
+.who-label {
   font-size: 13px;
   font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
-.team-badge-skeleton {
-  width: 42%;
-  height: 28px;
-  border-radius: 999px;
+.who-skeleton {
+  height: 14px;
+  border-radius: 8px;
   background: #e4e4e4;
 }
 
@@ -452,20 +455,7 @@ input:-webkit-autofill {
 .opening-chart svg {
   display: block;
   width: 100%;
-  height: 78px;
-}
-
-.opening-chart figcaption {
-  margin: 4px 0 0;
-  color: #d4d4d8;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.chart-empty {
-  margin: 4px 0 14px;
-  color: #000;
-  font-size: 14px;
+  height: 72px;
 }
 
 .when {
