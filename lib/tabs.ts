@@ -1,12 +1,15 @@
-export type AppTab = 'elenco' | 'utilizzo'
+export type AppTab = 'elenco' | 'utilizzo' | 'slack'
 
 export function parseTab(value: string | null | undefined): AppTab {
   if (value === 'utilizzo' || value === 'activity') return 'utilizzo'
+  if (value === 'slack') return 'slack'
   return 'elenco'
 }
 
-export function tabQuery(tab: AppTab): 'list' | 'activity' {
-  return tab === 'utilizzo' ? 'activity' : 'list'
+export function tabQuery(tab: AppTab): 'list' | 'activity' | 'slack' {
+  if (tab === 'utilizzo') return 'activity'
+  if (tab === 'slack') return 'slack'
+  return 'list'
 }
 
 export function parseCompanies(...values: Array<string | string[] | undefined>): string[] {
@@ -15,10 +18,11 @@ export function parseCompanies(...values: Array<string | string[] | undefined>):
 }
 
 export function withTab(path: string, tab: string | null | undefined): string {
-  if (tab !== 'elenco' && tab !== 'utilizzo' && tab !== 'list' && tab !== 'activity') return path
+  if (tab !== 'elenco' && tab !== 'utilizzo' && tab !== 'list' && tab !== 'activity' && tab !== 'slack') return path
   const [base, query = ''] = path.split('?')
   const params = new URLSearchParams(query)
-  params.set('tab', tab === 'utilizzo' || tab === 'activity' ? 'activity' : 'list')
+  const queryTab = tab === 'slack' ? 'slack' : tab === 'utilizzo' || tab === 'activity' ? 'activity' : 'list'
+  params.set('tab', queryTab)
   const next = params.toString()
   return next ? `${base}?${next}` : base
 }

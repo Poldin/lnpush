@@ -173,6 +173,12 @@ export function TodayApp({
     confirmOpen(card)
   }
 
+  function openFromSlack(card: CardView) {
+    if (!consumeTap()) return
+    openInNewTab(card.linkedinUrl)
+    confirmOpen(card)
+  }
+
   useEffect(() => {
     let cancel = false
     void fetch('/api/elenco')
@@ -361,7 +367,28 @@ function confirmOpen(card: CardView) {
         <button className={tab === 'utilizzo' ? 'tab on' : 'tab'} type="button" role="tab" aria-selected={tab === 'utilizzo'} onClick={() => selectTab('utilizzo')}>
           Activity
         </button>
+        <button
+          className={tab === 'slack' ? 'tab icon on' : 'tab icon'}
+          type="button"
+          role="tab"
+          aria-selected={tab === 'slack'}
+          aria-label="Slack preview"
+          onClick={() => selectTab('slack')}
+        >
+          <SlackLogo />
+        </button>
       </div>
+
+      {tab === 'slack' ? (
+        <SlackPreview
+          loading={!elenco && !elencoError}
+          error={elencoError}
+          cards={visibleCards}
+          today={mine?.counts.today ?? 0}
+          timeZone={timezone}
+          onOpen={openFromSlack}
+        />
+      ) : null}
 
       {tab === 'utilizzo' ? (
         usageError || usage?.unavailable ? (
@@ -699,6 +726,82 @@ function SeeLinkFace({ label }: { label: string }) {
       <LinkedInMark />
       <span aria-hidden="true">↗</span>
     </span>
+  )
+}
+
+function SlackLogo() {
+  return (
+    <svg className="slack-logo" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+      <path fill="#E01E5A" d="M6 15a2 2 0 1 1-2-2h2v2zm1 0a2 2 0 0 1 2-2 2 2 0 0 1 2 2v5a2 2 0 1 1-4 0v-5z" />
+      <path fill="#36C5F0" d="M9 6a2 2 0 1 1 2-2v2H9zm0 1a2 2 0 0 1 2 2 2 2 0 0 1-2 2H4a2 2 0 1 1 0-4h5z" />
+      <path fill="#2EB67D" d="M18 9a2 2 0 1 1 2 2h-2V9zm-1 0a2 2 0 0 1-2 2 2 2 0 0 1-2-2V4a2 2 0 1 1 4 0v5z" />
+      <path fill="#ECB22E" d="M15 18a2 2 0 1 1-2 2v-2h2zm0-1a2 2 0 0 1-2-2 2 2 0 0 1 2-2h5a2 2 0 1 1 0 4h-5z" />
+    </svg>
+  )
+}
+
+function SlackPreview({
+  loading,
+  error,
+  cards,
+  today,
+  timeZone,
+  onOpen,
+}: {
+  loading: boolean
+  error: boolean
+  cards: CardView[]
+  today: number
+  timeZone: string
+  onOpen: (card: CardView) => void
+}) {
+  const time = new Intl.DateTimeFormat('en-US', { timeZone, hour: 'numeric', minute: '2-digit' }).format(new Date())
+  return (
+    <section className="slack-home" aria-label="Slack preview">
+      <div className="slack-message">
+        <span className="slack-avatar" aria-hidden="true">
+          ln
+        </span>
+        <div className="slack-body">
+          <p className="slack-meta">
+            <strong className="slack-app-name">lnpush</strong>
+            <span className="slack-app">APP</span>
+            <time>{time}</time>
+          </p>
+          <p className="slack-header">Your LinkedIn cards for today</p>
+          <p className="slack-context">
+            {today}/{DAILY_GOAL} today
+          </p>
+          {error ? <p className="slack-context">The list cannot be loaded right now.</p> : null}
+          {loading ? <p className="slack-context">Loading cards…</p> : null}
+          {!loading && !error && cards.length === 0 ? <p className="slack-context">No cards for today.</p> : null}
+          {cards.map((card, index) => {
+            const hot = Boolean(card.hot)
+            const details = [card.role, card.company].filter(Boolean).join(' · ')
+            return (
+              <article key={card.id}>
+                {index > 0 ? <hr className="slack-divider" /> : null}
+                <div className="slack-section">
+                  <div className="slack-copy">
+                    <p className="slack-name">
+                      {hot ? <span aria-hidden="true">🔥 </span> : null}
+                      {card.refresh ? <span aria-hidden="true">🔁 </span> : null}
+                      <strong>{card.name}</strong>
+                    </p>
+                    {details ? <p className="slack-fields">{details}</p> : null}
+                    {hot ? <p className="slack-context">Hot company of the week</p> : null}
+                    {card.cooled ? <p className="slack-context slack-rest">Resting · two opens in the last 48 hours</p> : null}
+                  </div>
+                  <button className="slack-button" type="button" onClick={() => onOpen(card)}>
+                    Open profile
+                  </button>
+                </div>
+              </article>
+            )
+          })}
+        </div>
+      </div>
+    </section>
   )
 }
 

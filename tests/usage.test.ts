@@ -111,6 +111,8 @@ describe('tab query', () => {
     expect(parseTab('elenco')).toBe('elenco')
     expect(parseTab('utilizzo')).toBe('utilizzo')
     expect(parseTab('activity')).toBe('utilizzo')
+    expect(parseTab('slack')).toBe('slack')
+    expect(withTab('/', 'slack')).toBe('/?tab=slack')
     expect(withTab('/', 'utilizzo')).toBe('/?tab=activity')
     expect(withTab('/', 'activity')).toBe('/?tab=activity')
     expect(withTab('/login?error=link', 'elenco')).toBe('/login?error=link&tab=list')
