@@ -7,6 +7,7 @@ import {
   selectAllState,
   toggleCompanyInFilter,
   toggleVisibleInFilter,
+  withHotCompanyFirst,
 } from '../lib/companies'
 import { gestureCountsAsTap, nextTabFromSwipe } from '../lib/swipe'
 
@@ -35,6 +36,13 @@ describe('company filter', () => {
     expect(restored).toEqual({ mode: 'pick', picked: ['Alfa', 'Beta'] })
     expect(toggleVisibleInFilter(restored, all, all)).toEqual({ mode: 'all', picked: [] })
     expect(companyFilterParams(restored)).toEqual(['Alfa', 'Beta'])
+  })
+
+  it('lists the hot company first and leaves the other names in place', () => {
+    expect(withHotCompanyFirst(['Alfa', 'Beta', 'Gamma'], 'Gamma')).toEqual(['Gamma', 'Alfa', 'Beta'])
+    expect(withHotCompanyFirst(['Alfa', 'Beta'], 'Alfa')).toEqual(['Alfa', 'Beta'])
+    expect(withHotCompanyFirst(['Alfa', 'Beta'], 'Missing')).toEqual(['Alfa', 'Beta'])
+    expect(withHotCompanyFirst(['Alfa', 'Beta'], null)).toEqual(['Alfa', 'Beta'])
   })
 })
 

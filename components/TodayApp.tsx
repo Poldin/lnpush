@@ -11,6 +11,7 @@ import {
   selectAllState,
   toggleCompanyInFilter,
   toggleVisibleInFilter,
+  withHotCompanyFirst,
   type CompanyFilter,
 } from '../lib/companies'
 import { todayIso } from '../lib/dates'
@@ -319,8 +320,9 @@ export function TodayApp({
         ? []
         : visibleCards.filter((card) => companyFilter.picked.includes(card.company))
   const shownCards = filteredCards.slice(0, shownCount)
-  const companyChoices = allCompanies.filter((company) =>
-    company.toLocaleLowerCase('it').includes(companyQuery.trim().toLocaleLowerCase('it')),
+  const companyChoices = withHotCompanyFirst(
+    allCompanies.filter((company) => company.toLocaleLowerCase('it').includes(companyQuery.trim().toLocaleLowerCase('it'))),
+    elenco?.hotCompany,
   )
 
   return (
@@ -413,6 +415,7 @@ export function TodayApp({
           query={companyQuery}
           filter={companyFilter}
           allCompanies={allCompanies}
+          hotCompany={elenco.hotCompany ?? null}
           choices={companyChoices}
           onToggleOpen={() => setFilterOpen((current) => !current)}
           onClose={() => setFilterOpen(false)}
@@ -472,6 +475,7 @@ function CompanyFilter({
   query,
   filter,
   allCompanies,
+  hotCompany,
   choices,
   onToggleOpen,
   onClose,
@@ -483,6 +487,7 @@ function CompanyFilter({
   query: string
   filter: CompanyFilter
   allCompanies: string[]
+  hotCompany: string | null
   choices: string[]
   onToggleOpen: () => void
   onClose: () => void
@@ -567,7 +572,10 @@ function CompanyFilter({
                 checked={companyIsSelected(filter, company, allCompanies)}
                 onChange={() => onToggle(company)}
               />
-              <span>{company}</span>
+              <span>
+                {company === hotCompany ? <span aria-hidden="true">🔥 </span> : null}
+                {company}
+              </span>
             </label>
           ))}
         </div>
