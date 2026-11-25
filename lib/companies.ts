@@ -20,6 +20,13 @@ export function companyFilterParams(filter: CompanyFilter): string[] {
   return filter.picked
 }
 
+export function withHotCompanyFirst(companies: string[], hot: string | null | undefined): string[] {
+  if (!hot) return companies
+  const index = companies.indexOf(hot)
+  if (index <= 0) return companies
+  return [hot, ...companies.slice(0, index), ...companies.slice(index + 1)]
+}
+
 export function companyFilterLabel(filter: CompanyFilter): string {
   if (filter.mode === 'all') return 'All companies'
   if (filter.mode === 'none' || filter.picked.length === 0) return 'No companies'
