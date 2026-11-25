@@ -1330,3 +1330,136 @@ input:focus-visible,
     animation: none;
   }
 }
+
+.icon-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  color: #000;
+}
+
+.review-screen {
+  min-height: 100dvh;
+  background: #0e0e10;
+  color: #f4f4f5;
+}
+
+.review-wrap {
+  width: min(640px, 100%);
+  margin: 0 auto;
+  padding: calc(18px + env(safe-area-inset-top, 0px)) 16px calc(32px + env(safe-area-inset-bottom, 0px));
+}
+
+.review-screen .plain-title,
+.review-screen .kicker,
+.review-screen .lede,
+.review-screen .review-company,
+.review-screen .review-note,
+.review-screen .review-progress,
+.review-screen .review-status,
+.review-back {
+  color: #f4f4f5;
+}
+
+.review-back {
+  display: inline-block;
+  margin-bottom: 12px;
+  font-weight: 700;
+}
+
+.review-count {
+  margin: 8px 0 0;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.review-progress,
+.review-note,
+.review-status {
+  margin: 6px 0 0;
+}
+
+.review-company-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.review-company {
+  margin: 0;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.review-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.review-screen .primary,
+.review-screen .ghost {
+  width: auto;
+  min-height: 44px;
+  margin: 0;
+  flex: 0 0 auto;
+}
+
+.review-screen .primary {
+  background: #fff;
+  color: #111;
+  border-color: #fff;
+}
+
+.review-screen .ghost {
+  border-color: #3a3a40;
+  color: #fff;
+  background: transparent;
+}
+
+.review-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.review-screen .card {
+  border-color: #3a3a40;
+}
+
+.review-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.review-check input {
+  width: 22px;
+  height: 22px;
+  margin-top: 4px;
+  flex: 0 0 auto;
+  accent-color: #fff;
+}
+
+.review-snippet {
+  display: -webkit-box;
+  margin-top: 6px;
+  overflow: hidden;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+.review-open {
+  display: inline-block;
+  margin-top: 10px;
+  color: #fff;
+  font-weight: 700;
+}
