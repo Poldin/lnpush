@@ -471,7 +471,7 @@ function confirmOpen(card: CardView) {
                   }}
                   onKeyActivate={() => activateListCard(card)}
                 >
-                  <ProfileFacts name={card.name} role={card.role} company={card.company} />
+                  <ProfileFacts name={card.name} role={card.role} company={card.company} refresh={card.refresh} />
                 </ProfileCard>
               )
             })}
@@ -926,7 +926,7 @@ function UsagePanel({
   )
 }
 
-function ProfileFacts({ name, role, company, when }: { name: string; role: string; company: string; when?: string }) {
+function ProfileFacts({ name, role, company, when, refresh }: { name: string; role: string; company: string; when?: string; refresh?: boolean }) {
   return (
     <>
       {company ? (
@@ -935,7 +935,14 @@ function ProfileFacts({ name, role, company, when }: { name: string; role: strin
           <span>{company}</span>
         </p>
       ) : null}
-      <h3 className="name">{name}</h3>
+      <h3 className="name">
+        {refresh ? (
+          <span className="refresh-mark" aria-hidden="true">
+            🔁{' '}
+          </span>
+        ) : null}
+        {name}
+      </h3>
       {role ? <p className="role">{role}</p> : null}
       {when ? <p className="when">{when}</p> : null}
     </>

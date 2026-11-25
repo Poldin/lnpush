@@ -833,6 +833,11 @@ input:-webkit-autofill {
   overflow-wrap: break-word;
 }
 
+.refresh-mark {
+  font-size: 0.72em;
+  opacity: 0.8;
+}
+
 .role {
   margin: 6px 0 0;
 }

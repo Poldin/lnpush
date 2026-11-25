@@ -3,6 +3,7 @@ import { assignmentRank } from './hash'
 
 export const HOT_EPOCH = '2026-11-23'
 export const COOL_WINDOW_MS = 48 * 60 * 60 * 1000
+export const REFRESH_AFTER_MS = 10 * 24 * 60 * 60 * 1000
 
 export type ListContact = {
   id: string
@@ -89,6 +90,18 @@ export function resolveHotCompany(
   return chosen
 }
 
+export function hiddenContactIds(clicks: ListClick[], memberId: string, now: Date): string[] {
+  const lastByContact = new Map<string, number>()
+  for (const click of clicks) {
+    if (click.memberId !== memberId || !click.contactId) continue
+    const time = Date.parse(click.clickedAt)
+    if (Number.isNaN(time)) continue
+    const previous = lastByContact.get(click.contactId)
+    if (previous === undefined || time > previous) lastByContact.set(click.contactId, time)
+  }
+  return [...lastByContact.entries()].filter(([, time]) => now.getTime() - time < REFRESH_AFTER_MS).map(([id]) => id)
+}
+
 export function buildMemberList(
   contacts: ListContact[],
   clicks: ListClick[],
@@ -96,27 +109,33 @@ export function buildMemberList(
   date: string,
   now: Date,
   hotCompany: string | null,
-): Array<ListContact & { hot: boolean; cooled: boolean; clickTimes: string[] }> {
+): Array<ListContact & { hot: boolean; cooled: boolean; refresh: boolean; clickTimes: string[] }> {
   const times = new Map<string, string[]>()
-  const openedByMember = new Set<string>()
+  const myLast = new Map<string, number>()
   for (const click of clicks) {
     if (!click.contactId) continue
     const bucket = times.get(click.contactId) ?? []
     if (click.clickedAt) bucket.push(click.clickedAt)
     times.set(click.contactId, bucket)
-    if (click.memberId === memberId) openedByMember.add(click.contactId)
+    if (click.memberId !== memberId) continue
+    const time = Date.parse(click.clickedAt)
+    if (Number.isNaN(time)) continue
+    const previous = myLast.get(click.contactId)
+    if (previous === undefined || time > previous) myLast.set(click.contactId, time)
   }
   const cards = contacts
-    .filter((contact) => contact.linkedinUrl.trim() && !openedByMember.has(contact.id))
-    .map((contact) => {
+    .filter((contact) => contact.linkedinUrl.trim())
+    .flatMap((contact) => {
+      const last = myLast.get(contact.id)
+      if (last !== undefined && now.getTime() - last < REFRESH_AFTER_MS) return []
       const clickTimes = times.get(contact.id) ?? []
       const hot = Boolean(hotCompany) && contact.company.trim() === hotCompany
-      return { ...contact, hot, cooled: isCooled(clickTimes, now), clickTimes }
+      return [{ ...contact, hot, cooled: isCooled(clickTimes, now), refresh: last !== undefined, clickTimes }]
     })
   return sortListCards(cards, { memberId, date, now, hotCompany })
 }
 
-export function sortListCards<T extends { id: string; company: string; clickTimes?: string[]; hot?: boolean }>(
+export function sortListCards<T extends { id: string; company: string; clickTimes?: string[]; hot?: boolean; refresh?: boolean }>(
   cards: T[],
   args: { memberId: string; date: string; now: Date; hotCompany: string | null },
 ): T[] {
@@ -129,15 +148,13 @@ export function sortListCards<T extends { id: string; company: string; clickTime
 }
 
 function bucketOf(
-  card: { id: string; company: string; clickTimes?: string[]; hot?: boolean },
+  card: { id: string; company: string; clickTimes?: string[]; hot?: boolean; refresh?: boolean },
   args: { now: Date; hotCompany: string | null },
 ): number {
   const hot = card.hot ?? (Boolean(args.hotCompany) && card.company.trim() === args.hotCompany)
   const cooled = isCooled(card.clickTimes ?? [], args.now)
-  if (!cooled && hot) return 0
-  if (!cooled) return 1
-  if (hot) return 2
-  return 3
+  const refresh = card.refresh === true
+  return (cooled ? 4 : 0) + (refresh ? 2 : 0) + (hot ? 0 : 1)
 }
 
 function pickAutomatic(companies: CompanyScore[], lastHot: Map<string, string>): string | null {

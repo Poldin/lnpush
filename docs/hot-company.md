@@ -21,13 +21,14 @@ Sulle card dell’azienda calda compare 🔥, la scritta **Hot company of the we
 
 Un profilo va **in fondo** alla lista di tutti, non sparisce, se negli ultimi 48 ore ha almeno 2 click del team (persone qualsiasi). Il conto è mobile: è «freddo» finché il **secondo click più recente** è ancora dentro le 48 ore. Un terzo click è permesso: non blocca il profilo, può solo tenerlo in fondo se due click restano nella finestra.
 
-Chi ha già aperto un profilo non lo rivede nella propria List. Gli altri continuano a vederlo.
+Un profilo che ho aperto sparisce dalla mia List finché il mio ultimo click su quel profilo ha meno di 10×24 ore. Dopo, torna come scheda «refresh»: prima del nome c’è 🔁. Un nuovo click lo nasconde di nuovo per 10 giorni e conta anche per l’anti-spam. Gli altri continuano a vedere i profili aperti da me.
 
 Ordine della List, stabile per persona e per giorno (stesso hash di sempre):
 
-1. caldi e non freddi
-2. gli altri non freddi
-3. freddi, con i caldi ancora davanti
+1. caldi, non freddi, mai aperti da me
+2. gli altri non freddi, mai aperti da me
+3. refresh non freddi, prima i caldi
+4. freddi in fondo: prima i caldi, e i mai aperti da me prima dei refresh
 
 Il filtro azienda si applica dopo.
 

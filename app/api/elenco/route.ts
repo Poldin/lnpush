@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 
 import { loadConfigFile } from '../../../lib/data'
 import { todayIso } from '../../../lib/dates'
-import { buildMemberList, companyScores, resolveHotCompany, weekStartIso } from '../../../lib/listOrder'
+import { buildMemberList, companyScores, hiddenContactIds, resolveHotCompany, weekStartIso } from '../../../lib/listOrder'
 import { createServerSupabase } from '../../../lib/supabase/server'
 import { loadHotWeeks, loadRoster, memberForUser } from '../../../lib/supabase/team'
 
@@ -40,7 +40,7 @@ export async function GET() {
       memberName: member.name,
       cards,
       companies,
-      openedContactIds: [...new Set(roster.clicks.filter((click) => click.memberId === member.id).map((click) => click.contactId))],
+      openedContactIds: hiddenContactIds(roster.clicks, member.id, now),
       hotCompany,
       contactLabels,
       beforeStart: false,
