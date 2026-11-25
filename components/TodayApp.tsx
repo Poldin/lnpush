@@ -14,6 +14,7 @@ import {
   type CompanyFilter,
 } from '../lib/companies'
 import { todayIso } from '../lib/dates'
+import { DAILY_GOAL, dailyGoal } from '../lib/goal'
 import { createBrowserSupabase } from '../lib/supabase/browser'
 import { gestureCountsAsTap, nextTabFromSwipe } from '../lib/swipe'
 import { tabQuery, type AppTab } from '../lib/tabs'
@@ -245,7 +246,7 @@ export function TodayApp({
       },
       timezone,
     )
-    setMine((current) => applyOpening(current ?? { recent: [], counts: { today: 0, week: 0, total: 0 } }, opening, timezone))
+    setMine((current) => applyOpening(current ?? { recent: [], counts: { today: 0, week: 0, month: 0, total: 0 } }, opening, timezone))
   }
 
   function confirmOpen(card: CardView) {
@@ -317,6 +318,7 @@ export function TodayApp({
           </button>
         </form>
       </div>
+      <DailyGoal openedToday={mine?.counts.today ?? null} unavailable={usageError || usage?.unavailable === true} />
       <div className="tabs" role="tablist" aria-label="Sections">
         <button className={tab === 'elenco' ? 'tab on' : 'tab'} type="button" role="tab" aria-selected={tab === 'elenco'} onClick={() => selectTab('elenco')}>
           List
@@ -330,7 +332,7 @@ export function TodayApp({
         usageError || usage?.unavailable ? (
           <UsagePanel
             unavailable
-            counts={{ today: 0, week: 0, total: 0 }}
+            counts={{ today: 0, week: 0, month: 0, total: 0 }}
             recent={[]}
             shown={0}
             onMore={() => undefined}
@@ -601,6 +603,56 @@ function ProfileCard({
   )
 }
 
+function DailyGoal({ openedToday, unavailable }: { openedToday: number | null; unavailable: boolean }) {
+  const seen = useRef<number | null>(null)
+  const [celebrate, setCelebrate] = useState(false)
+
+  useEffect(() => {
+    if (openedToday === null) return
+    const previous = seen.current
+    seen.current = openedToday
+    if (previous !== null && previous < DAILY_GOAL && openedToday >= DAILY_GOAL) {
+      setCelebrate(true)
+      const timer = window.setTimeout(() => setCelebrate(false), 1400)
+      return () => window.clearTimeout(timer)
+    }
+  }, [openedToday])
+
+  if (openedToday === null && !unavailable) return <GoalSkeleton />
+
+  const view = dailyGoal(openedToday ?? 0)
+  const label = unavailable
+    ? "Today's count isn't available"
+    : view.complete
+      ? `${view.number} profiles opened today. Daily goal of ${DAILY_GOAL} reached.`
+      : `${view.number} profiles left to reach today's goal of ${DAILY_GOAL}.`
+  return (
+    <section className={celebrate ? 'goal celebrate' : 'goal'} aria-label={label}>
+      <span className="goal-emoji" aria-hidden="true">
+        {unavailable ? '🐐' : view.emoji}
+      </span>
+      <span className="goal-number">{unavailable ? '–' : view.number}</span>
+      <p className="goal-phrase">{unavailable ? "Today's count isn't available" : view.phrase}</p>
+      <div className="goal-track" aria-hidden="true">
+        <span style={{ width: `${unavailable ? 0 : view.progress * 100}%` }} />
+      </div>
+    </section>
+  )
+}
+
+function GoalSkeleton() {
+  return (
+    <div className="goal" aria-hidden="true">
+      <span className="skeleton goal-skeleton-mark" />
+      <span className="skeleton goal-skeleton-mark" />
+      <span className="skeleton goal-skeleton-phrase" />
+      <div className="goal-track">
+        <span className="skeleton" />
+      </div>
+    </div>
+  )
+}
+
 function SeeLinkFace({ label }: { label: string }) {
   return (
     <span className="see-link-hit">
@@ -640,12 +692,12 @@ function UsagePanel({
     <section id="lista" aria-labelledby="utilizzo-title">
       <dl className="stats stats-plain">
         <div>
-          <dt>Today</dt>
-          <dd>{counts.today}</dd>
-        </div>
-        <div>
           <dt>7 days</dt>
           <dd>{counts.week}</dd>
+        </div>
+        <div>
+          <dt>30 days</dt>
+          <dd>{counts.month}</dd>
         </div>
         <div>
           <dt>Total</dt>
