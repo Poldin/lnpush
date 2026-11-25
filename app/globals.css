@@ -164,6 +164,107 @@ input:-webkit-autofill {
   font-weight: 700;
 }
 
+.team-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 8px 0 14px;
+}
+
+.team-badge {
+  padding: 4px 10px;
+  border: 1px solid #000;
+  border-radius: 999px;
+  background: #fff;
+  color: #000;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.team-badge-skeleton {
+  width: 42%;
+  height: 28px;
+  border-radius: 999px;
+  background: #e4e4e4;
+}
+
+.boards {
+  margin: 0 0 16px;
+}
+
+.boards summary {
+  min-height: 44px;
+  padding: 10px 0;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.board {
+  margin: 0 0 14px;
+}
+
+.board-title {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.board-switch {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.board-option {
+  min-height: 36px;
+  padding: 6px 10px;
+  border: 1px solid #000;
+  border-radius: 999px;
+  background: #fff;
+  color: #000;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.board-option.on {
+  background: #000;
+  color: #fff;
+}
+
+.board-empty {
+  margin: 0;
+  font-size: 14px;
+}
+
+.board-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.board-list li {
+  display: grid;
+  grid-template-columns: 1.6rem minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: baseline;
+  padding: 7px 0;
+  border-top: 1px solid #e4e4e4;
+  font-size: 15px;
+}
+
+.board-rank,
+.board-count {
+  font-weight: 700;
+}
+
+.board-label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .goal {
   display: grid;
   grid-template-columns: auto auto minmax(0, 1fr);

@@ -1,3 +1,5 @@
+import type { TeamBoards } from './leaderboard'
+
 export type Contact = {
   id: string
   name: string
@@ -93,6 +95,7 @@ export type UsageView = {
   unavailable: boolean
   counts: UsageCounts
   recent: UsageRecentView[]
+  team: TeamBoards | null
 }
 
 export type ContactLabel = {

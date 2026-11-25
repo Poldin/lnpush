@@ -21,6 +21,7 @@ import { createBrowserSupabase } from '../lib/supabase/browser'
 import { gestureCountsAsTap, nextTabFromSwipe } from '../lib/swipe'
 import { tabQuery, type AppTab } from '../lib/tabs'
 import { applyOpening, toOpening } from '../lib/usage'
+import type { BoardPeriod } from '../lib/leaderboard'
 import type { CardView, ContactLabel, HomeView, UsageCounts, UsageView } from '../lib/types'
 
 export function TodayApp({
@@ -251,7 +252,17 @@ export function TodayApp({
     setMine((current) => applyOpening(current ?? { recent: [], counts: { today: 0, week: 0, month: 0, total: 0 } }, opening, timezone))
   }
 
-  function confirmOpen(card: CardView) {
+  function refreshTeamBoards() {
+  void fetch('/api/utilizzo')
+    .then(async (response) => {
+      if (!response.ok) return
+      const data = (await response.json()) as UsageView
+      setUsage((current) => (current ? { ...current, team: data.team } : current))
+    })
+    .catch(() => undefined)
+}
+
+function confirmOpen(card: CardView) {
     if (armTimer.current) window.clearTimeout(armTimer.current)
     armTimer.current = null
     setArmedId(null)
@@ -281,6 +292,7 @@ export function TodayApp({
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'clicks' }, (payload) => {
         const row = payload.new as { contact_id?: string; team_member_id?: string; clicked_at?: string }
         if (!row.contact_id) return
+        void refreshTeamBoards()
         const clickedAt = row.clicked_at ?? new Date().toISOString()
         if (row.team_member_id === memberId) {
           hideContact(row.contact_id)
@@ -355,6 +367,7 @@ export function TodayApp({
           <UsagePanel
             unavailable
             counts={{ today: 0, week: 0, month: 0, total: 0 }}
+            team={null}
             recent={[]}
             shown={0}
             onMore={() => undefined}
@@ -365,6 +378,7 @@ export function TodayApp({
           <UsagePanel
             unavailable={false}
             counts={mine.counts}
+            team={usage?.team ?? null}
             recent={mine.recent}
             shown={usageShown}
             onMore={() => setUsageShown((current) => current + 10)}
@@ -685,9 +699,94 @@ function SeeLinkFace({ label }: { label: string }) {
   )
 }
 
+function TeamBadges({ team }: { team: NonNullable<UsageView['team']> }) {
+  return (
+    <div className="team-badges">
+      <span className="team-badge">Team · 7 days {team.week}</span>
+      <span className="team-badge">Team · 30 days {team.month}</span>
+    </div>
+  )
+}
+
+function Leaderboards({ team }: { team: NonNullable<UsageView['team']> }) {
+  const [peoplePeriod, setPeoplePeriod] = useState<BoardPeriod>('week')
+  const [companyPeriod, setCompanyPeriod] = useState<BoardPeriod>('week')
+  return (
+    <details className="boards">
+      <summary>Leaderboards</summary>
+      <Board
+        title="Most clicked people"
+        period={peoplePeriod}
+        onPeriod={setPeoplePeriod}
+        empty="No clicks in this period."
+        rows={team.people[peoplePeriod].map((row) => ({
+          key: row.contactId,
+          label: row.company ? `${row.name} · ${row.company}` : row.name,
+          clicks: row.clicks,
+        }))}
+      />
+      <Board
+        title="Most clicked companies"
+        period={companyPeriod}
+        onPeriod={setCompanyPeriod}
+        empty="No companies in this period."
+        rows={team.companies[companyPeriod].map((row) => ({
+          key: row.company,
+          label: row.company,
+          clicks: row.clicks,
+        }))}
+      />
+    </details>
+  )
+}
+
+function Board({
+  title,
+  period,
+  onPeriod,
+  rows,
+  empty,
+}: {
+  title: string
+  period: BoardPeriod
+  onPeriod: (period: BoardPeriod) => void
+  rows: { key: string; label: string; clicks: number }[]
+  empty: string
+}) {
+  return (
+    <section className="board" aria-label={title}>
+      <h2 className="board-title">{title}</h2>
+      <div className="board-switch" role="group" aria-label={`${title} period`}>
+        {(
+          [
+            ['week', '7 days'],
+            ['month', '30 days'],
+            ['all', 'All time'],
+          ] as const
+        ).map(([value, label]) => (
+          <button key={value} className={period === value ? 'board-option on' : 'board-option'} type="button" aria-pressed={period === value} onClick={() => onPeriod(value)}>
+            {label}
+          </button>
+        ))}
+      </div>
+      {rows.length === 0 ? <p className="board-empty">{empty}</p> : null}
+      <ol className="board-list">
+        {rows.map((row, index) => (
+          <li key={row.key}>
+            <span className="board-rank">{index + 1}</span>
+            <span className="board-label">{row.label}</span>
+            <span className="board-count">{row.clicks}</span>
+          </li>
+        ))}
+      </ol>
+    </section>
+  )
+}
+
 function UsagePanel({
   unavailable,
   counts,
+  team,
   recent,
   shown,
   onMore,
@@ -696,6 +795,7 @@ function UsagePanel({
 }: {
   unavailable: boolean
   counts: UsageCounts
+  team: UsageView['team']
   recent: UsageView['recent']
   shown: number
   onMore: () => void
@@ -725,7 +825,9 @@ function UsagePanel({
           <dt>Total</dt>
           <dd>{counts.total}</dd>
         </div>
-      </dl>
+        </dl>
+      {team ? <TeamBadges team={team} /> : null}
+      {team ? <Leaderboards team={team} /> : null}
       <h1 className="list-title" id="utilizzo-title">
         Your openings
       </h1>
@@ -824,6 +926,10 @@ function UsageSkeleton() {
         <div className="skeleton skeleton-count" />
         <div className="skeleton skeleton-count" />
         <div className="skeleton skeleton-count" />
+      </div>
+      <div className="team-badges">
+        <span className="skeleton team-badge-skeleton" />
+        <span className="skeleton team-badge-skeleton" />
       </div>
       <div className="skeleton skeleton-line title-line" />
       <div className="cards">

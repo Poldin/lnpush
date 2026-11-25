@@ -2,6 +2,7 @@ import type { SupabaseClient, User } from '@supabase/supabase-js'
 
 import { contactIsTechnical } from '../classify'
 import { normalizeLinkedInUrl } from '../linkedin'
+import { teamBoards, type TeamClick } from '../leaderboard'
 import { ownCounts, ownOpenings, type UsageClick } from '../usage'
 import type { Contact, TeamMember, UsageView } from '../types'
 
@@ -105,7 +106,7 @@ export async function loadUsage(supabase: SupabaseClient, memberId: string, time
     .eq('team_member_id', memberId)
     .order('clicked_at', { ascending: false })
 
-  if (error) return { unavailable: true, counts: { today: 0, week: 0, month: 0, total: 0 }, recent: [] }
+  if (error) return { unavailable: true, counts: { today: 0, week: 0, month: 0, total: 0 }, recent: [], team: null }
 
   const clicks: UsageClick[] = []
   for (const row of data ?? []) {
@@ -125,7 +126,28 @@ export async function loadUsage(supabase: SupabaseClient, memberId: string, time
     unavailable: false,
     counts: ownCounts(clicks, memberId, timeZone),
     recent: ownOpenings(clicks, memberId, timeZone),
+    team: await loadTeamBoards(supabase, timeZone),
   }
+}
+
+async function loadTeamBoards(supabase: SupabaseClient, timeZone: string) {
+  const { data, error } = await supabase
+    .from('clicks')
+    .select('clicked_at, contact_id, contacts!clicks_contact_id_fkey(full_name, company)')
+
+  if (error) return null
+  const clicks: TeamClick[] = []
+  for (const row of data ?? []) {
+    const contact = one(row.contacts)
+    if (!row.contact_id || !row.clicked_at) continue
+    clicks.push({
+      contactId: row.contact_id,
+      contactName: (contact?.full_name ?? '').replace(/\s+/g, ' ').trim(),
+      company: (contact?.company ?? '').replace(/\s+/g, ' ').trim(),
+      clickedAt: row.clicked_at,
+    })
+  }
+  return teamBoards(clicks, timeZone)
 }
 
 function one<T>(value: T | T[] | null): T | null {
