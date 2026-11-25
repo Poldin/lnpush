@@ -41,7 +41,7 @@ export async function loadRoster(supabase: SupabaseClient, technicalPattern: str
       .eq('active', true)
       .not('linkedin_url', 'is', null),
     supabase.from('team_members').select('id, name, email, auth_user_id, active').eq('active', true),
-    supabase.from('clicks').select('team_member_id, contact_id'),
+    supabase.from('clicks').select('team_member_id, contact_id, clicked_at'),
   ])
 
   if (contactsResult.error) throw new Error('Could not read the contacts.')
@@ -71,10 +71,22 @@ export async function loadRoster(supabase: SupabaseClient, technicalPattern: str
   const clicks = clicksResult.error
     ? []
     : (clicksResult.data ?? []).flatMap((row) =>
-        row.team_member_id && row.contact_id ? [{ memberId: row.team_member_id, contactId: row.contact_id }] : [],
+        row.team_member_id && row.contact_id
+          ? [{ memberId: row.team_member_id, contactId: row.contact_id, clickedAt: row.clicked_at ?? '' }]
+          : [],
       )
 
   return { contacts, team, clicks, teamRows: (teamResult.data ?? []) as TeamRow[] }
+}
+
+export async function loadHotWeeks(supabase: SupabaseClient): Promise<{ weekStart: string; company: string }[]> {
+  const { data, error } = await supabase.from('hot_weeks').select('week_start, company')
+  if (error || !data) return []
+  return data.flatMap((row) => {
+    const weekStart = typeof row.week_start === 'string' ? row.week_start.slice(0, 10) : ''
+    const company = (row.company ?? '').trim()
+    return weekStart && company ? [{ weekStart, company }] : []
+  })
 }
 
 export function memberForUser(rows: TeamRow[], user: User): TeamRow | null {
