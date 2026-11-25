@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server'
 
-import { buildTodayPlan, homeForMember, loadConfigFile, queueCards } from '../../../lib/data'
+import { loadConfigFile } from '../../../lib/data'
 import { todayIso } from '../../../lib/dates'
+import { buildMemberList, companyScores, resolveHotCompany, weekStartIso } from '../../../lib/listOrder'
 import { createServerSupabase } from '../../../lib/supabase/server'
-import { loadRoster, memberForUser } from '../../../lib/supabase/team'
+import { loadHotWeeks, loadRoster, memberForUser } from '../../../lib/supabase/team'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,29 +19,34 @@ export async function GET() {
     const member = memberForUser(roster.teamRows, data.user)
     if (!member) return NextResponse.json({ error: 'This email is not on the team.' }, { status: 403 })
 
-    const plan = buildTodayPlan(
-      { contacts: roster.contacts, team: roster.team, config, clicks: roster.clicks },
-      todayIso(config.timezone),
-    )
-    const openedContactIds = [...new Set(roster.clicks.map((click) => click.contactId))]
+    const now = new Date()
+    const isoDate = todayIso(config.timezone, now)
+    const forced = await loadHotWeeks(supabase)
+    const hotCompany = resolveHotCompany(weekStartIso(config.timezone, now), companyScores(roster.contacts, roster.clicks), forced)
+    const cards = buildMemberList(roster.contacts, roster.clicks, member.id, isoDate, now, hotCompany)
     const contactLabels = Object.fromEntries(
       roster.contacts.map((contact) => [
         contact.id,
         { name: contact.name, role: contact.role, company: contact.company, linkedinUrl: contact.linkedinUrl },
       ]),
     )
-    const view = homeForMember(plan, member.id, openedContactIds, contactLabels)
     const companies = [...new Set(roster.contacts.map((contact) => contact.company).filter(Boolean))].sort((left, right) =>
       left.localeCompare(right, 'it'),
     )
     return NextResponse.json({
-      ...view,
-      cards: queueCards(
-        { contacts: roster.contacts, team: roster.team, config, clicks: roster.clicks },
-        member.id,
-        plan.isoDate,
-      ),
+      isoDate,
+      timezone: config.timezone,
+      memberId: member.id,
+      memberName: member.name,
+      cards,
       companies,
+      openedContactIds: [...new Set(roster.clicks.filter((click) => click.memberId === member.id).map((click) => click.contactId))],
+      hotCompany,
+      contactLabels,
+      beforeStart: false,
+      startLabel: '',
+      cooldownDays: 0,
+      maxMembersPerContact: 0,
     })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'The list is unavailable.'

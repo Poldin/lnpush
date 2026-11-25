@@ -514,8 +514,40 @@ input:-webkit-autofill {
   cursor: pointer;
 }
 
+.profile-card.hot {
+  position: relative;
+  overflow: hidden;
+}
+
+.profile-card.hot::after {
+  content: '🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥';
+  position: absolute;
+  inset: -8px;
+  z-index: 0;
+  color: #fff;
+  font-size: 22px;
+  line-height: 1.45;
+  letter-spacing: 8px;
+  opacity: 0.14;
+  pointer-events: none;
+  word-break: break-all;
+}
+
+.profile-card.hot > * {
+  position: relative;
+  z-index: 1;
+}
+
+.hot-note {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: #fff;
+}
+
 .profile-card::before,
-.profile-card::after,
+.profile-card:not(.hot)::after,
 .card-action::before,
 .card-action::after,
 .see-link::before,

@@ -15,6 +15,7 @@ import {
 } from '../lib/companies'
 import { todayIso } from '../lib/dates'
 import { DAILY_GOAL, dailyGoal } from '../lib/goal'
+import { sortListCards } from '../lib/listOrder'
 import { createBrowserSupabase } from '../lib/supabase/browser'
 import { gestureCountsAsTap, nextTabFromSwipe } from '../lib/swipe'
 import { tabQuery, type AppTab } from '../lib/tabs'
@@ -279,10 +280,21 @@ export function TodayApp({
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'clicks' }, (payload) => {
         const row = payload.new as { contact_id?: string; team_member_id?: string; clicked_at?: string }
         if (!row.contact_id) return
-        hideContact(row.contact_id)
+        const clickedAt = row.clicked_at ?? new Date().toISOString()
         if (row.team_member_id === memberId) {
-          rememberOwnOpening(row.contact_id, row.clicked_at ?? new Date().toISOString())
+          hideContact(row.contact_id)
+          rememberOwnOpening(row.contact_id, clickedAt)
+          return
         }
+        setElenco((current) => {
+          if (!current) return current
+          return {
+            ...current,
+            cards: current.cards.map((card) =>
+              card.id === row.contact_id ? { ...card, clickTimes: [...(card.clickTimes ?? []), clickedAt] } : card,
+            ),
+          }
+        })
       })
       .subscribe()
     return () => {
@@ -290,7 +302,15 @@ export function TodayApp({
     }
   }, [memberId, timezone])
 
-  const visibleCards = (elenco?.cards ?? []).filter((card) => !hiddenIds.has(card.id))
+  const visibleCards = sortListCards(
+    (elenco?.cards ?? []).filter((card) => !hiddenIds.has(card.id)),
+    {
+      memberId,
+      date: elenco?.isoDate ?? isoDate,
+      now: new Date(),
+      hotCompany: elenco?.hotCompany ?? null,
+    },
+  )
   const allCompanies = elenco?.companies ?? []
   const filteredCards =
     companyFilter.mode === 'all'
@@ -380,24 +400,14 @@ export function TodayApp({
 
       {tab === 'elenco' && !elenco && !elencoError ? <ElencoSkeleton /> : null}
 
-      {tab === 'elenco' && elenco?.beforeStart ? (
+      {tab === 'elenco' && elenco && visibleCards.length === 0 ? (
         <section className="card" id="lista">
-          <h2 className="name">The plan starts on {elenco.startLabel}</h2>
-          <p className="role">There are no profiles to open today.</p>
+          <h2 className="name">The list is empty</h2>
+          <p className="role">You have already opened every profile here.</p>
         </section>
       ) : null}
 
-      {tab === 'elenco' && elenco && !elenco.beforeStart && visibleCards.length === 0 ? (
-        <section className="card" id="lista">
-          <h2 className="name">The list is empty today</h2>
-          <p className="role">
-            Opened profiles stay paused for {elenco.cooldownDays} days and can go to at most {elenco.maxMembersPerContact}{' '}
-            people on the team.
-          </p>
-        </section>
-      ) : null}
-
-      {tab === 'elenco' && elenco && !elenco.beforeStart ? (
+      {tab === 'elenco' && elenco ? (
         <CompanyFilter
           open={filterOpen}
           query={companyQuery}
@@ -428,6 +438,7 @@ export function TodayApp({
               return (
                 <ProfileCard
                   key={card.id}
+                  hot={Boolean(elenco?.hotCompany) && card.company === elenco.hotCompany}
                   armed={armed}
                   label={armed ? 'Tap again to open' : 'View on'}
                   ariaLabel={
@@ -567,6 +578,7 @@ function CompanyFilter({
 
 function ProfileCard({
   armed,
+  hot,
   label,
   ariaLabel,
   onActivate,
@@ -574,6 +586,7 @@ function ProfileCard({
   children,
 }: {
   armed?: boolean
+  hot?: boolean
   label: string
   ariaLabel: string
   onActivate: () => void
@@ -582,7 +595,7 @@ function ProfileCard({
 }) {
   return (
     <article
-      className="card profile-card"
+      className={hot ? 'card profile-card hot' : 'card profile-card'}
       role="button"
       tabIndex={0}
       aria-label={ariaLabel}
@@ -593,6 +606,7 @@ function ProfileCard({
         onKeyActivate()
       }}
     >
+      {hot ? <p className="hot-note">🔥 Hot company of the week</p> : null}
       {children}
       <div className="card-action">
         <span className={armed ? 'see-link arming' : 'see-link'}>

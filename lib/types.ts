@@ -37,6 +37,8 @@ export type CardView = {
   role: string
   company: string
   linkedinUrl: string
+  hot?: boolean
+  clickTimes?: string[]
 }
 
 export type MemberView = {
@@ -108,6 +110,7 @@ export type HomeView = {
   cards: CardView[]
   companies: string[]
   openedContactIds: string[]
+  hotCompany?: string | null
   contactLabels: Record<string, ContactLabel>
   beforeStart: boolean
   startLabel: string
