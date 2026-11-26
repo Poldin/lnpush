@@ -18,6 +18,12 @@ export function explainDbError(error: { message?: string; code?: string }): stri
   if (error.code === '42P01' || /profile_candidates|collector_runs/.test(message)) {
     return 'Apply supabase/profile_candidates.sql in the Supabase SQL editor.'
   }
+  if (
+    /\bcontacts\b/.test(message) &&
+    (error.code === '42501' || /permission denied|row-level security/i.test(message))
+  ) {
+    return 'Apply supabase/collect_direct_to_contacts.sql in the Supabase SQL editor.'
+  }
   return 'Could not use the collector tables.'
 }
 

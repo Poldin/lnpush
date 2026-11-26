@@ -1,14 +1,21 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
-import { loadBlocked, explainDbError } from './collectDb'
-import { cleanText, companySearchQuery } from './collector'
+import { explainDbError } from './collectDb'
+import {
+  contactDraftsFromPaste,
+  countsByCompanyName,
+  profileCountForCompany,
+  savedProfile,
+  type SavedProfile,
+} from './collectContacts'
+import { cleanText, normalizeCollectorUrl } from './collector'
 import {
   parseCompanyLines,
   type CompanyStatus,
   type QueueCompany,
   type QueueProgress,
 } from './collectQueue'
-import { parseGoogleLinkedInPaste, type ParsedProfile } from './googlePaste'
+import { parseGoogleLinkedInPaste } from './googlePaste'
 
 const PAGE = 1000
 
@@ -25,8 +32,10 @@ export type QueueResult =
   | { ok: false; error: string; status: number }
 
 export type PasteResult =
-  | { ok: true; added: number; skipped: number; empty: boolean; profiles: ParsedProfile[] }
+  | { ok: true; added: number; skipped: number; empty: boolean; profiles: SavedProfile[] }
   | { ok: false; error: string; status: number }
+
+export type DeleteContactResult = { ok: true } | { ok: false; error: string; status: number }
 
 async function pageAll<T>(
   load: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string; code?: string } | null }>,
@@ -60,15 +69,9 @@ function sortCompanies(companies: QueueCompany[]): QueueCompany[] {
 
 async function profileCounts(supabase: SupabaseClient): Promise<Map<string, number>> {
   const rows = await pageAll<{ company: string | null }>(async (from, to) =>
-    supabase.from('profile_candidates').select('company').range(from, to),
+    supabase.from('contacts').select('company').eq('active', true).range(from, to),
   )
-  const counts = new Map<string, number>()
-  for (const row of rows) {
-    const company = cleanText(row.company ?? '').toLocaleLowerCase('en')
-    if (!company) continue
-    counts.set(company, (counts.get(company) ?? 0) + 1)
-  }
-  return counts
+  return countsByCompanyName(rows)
 }
 
 export async function loadCollectorQueue(supabase: SupabaseClient): Promise<QueueResult> {
@@ -95,7 +98,7 @@ export async function loadCollectorQueue(supabase: SupabaseClient): Promise<Queu
             status,
             createdAt: row.created_at ?? '',
             completedAt: row.completed_at,
-            profiles: counts.get(name.toLocaleLowerCase('en')) ?? 0,
+            profiles: profileCountForCompany(name, counts),
           },
         ]
       }),
@@ -202,10 +205,16 @@ export async function reopenCompany(supabase: SupabaseClient, id: string): Promi
   }
 }
 
-function limitQuery(value: string, company: string): string {
-  const text = cleanText(value)
-  const query = text || companySearchQuery(company)
-  return query.length <= 500 ? query : query.slice(0, 500).trim()
+async function loadContactUrls(supabase: SupabaseClient): Promise<Set<string>> {
+  const rows = await pageAll<{ linkedin_url: string | null }>(async (from, to) =>
+    supabase.from('contacts').select('linkedin_url').not('linkedin_url', 'is', null).range(from, to),
+  )
+  const urls = new Set<string>()
+  for (const row of rows) {
+    const url = normalizeCollectorUrl(row.linkedin_url ?? '')
+    if (url) urls.add(url)
+  }
+  return urls
 }
 
 export async function savePastedProfiles(
@@ -213,7 +222,6 @@ export async function savePastedProfiles(
   companyId: string,
   html: string,
   text: string,
-  sourceQuery: string,
 ): Promise<PasteResult> {
   try {
     const { data, error } = await supabase.from('collector_companies').select('id, name').eq('id', companyId).maybeSingle()
@@ -224,40 +232,37 @@ export async function savePastedProfiles(
     const parsed = parseGoogleLinkedInPaste({ html, text })
     if (parsed.profiles.length === 0) return { ok: true, added: 0, skipped: 0, empty: true, profiles: [] }
 
-    const blocked = await loadBlocked(supabase)
-    const fresh: ParsedProfile[] = []
-    let skipped = parsed.duplicates
-    for (const profile of parsed.profiles) {
-      if (blocked.contacts.has(profile.linkedin_url) || blocked.candidates.has(profile.linkedin_url)) {
-        skipped += 1
-        continue
-      }
-      fresh.push(profile)
-    }
-    const batch = fresh.slice(0, 100)
-
-    const saved: ParsedProfile[] = []
-    const query = limitQuery(sourceQuery, company)
-    for (const [index, profile] of batch.entries()) {
-      const { error: insertError } = await supabase.from('profile_candidates').insert({
-        company,
-        full_name: profile.full_name,
-        headline: profile.headline,
-        linkedin_url: profile.linkedin_url,
-        snippet: profile.snippet,
-        source_query: query,
-        rank: index + 1,
-        status: 'pending',
-      })
+    const planned = contactDraftsFromPaste(company, parsed, await loadContactUrls(supabase))
+    const saved: SavedProfile[] = []
+    let skipped = planned.skipped
+    for (const draft of planned.drafts) {
+      const { data: inserted, error: insertError } = await supabase.from('contacts').insert(draft).select('id').maybeSingle()
       if (insertError?.code === '23505') {
         skipped += 1
         continue
       }
       if (insertError) return { ok: false, error: explainDbError(insertError), status: 500 }
-      saved.push(profile)
+      if (!inserted?.id || typeof inserted.id !== 'string') {
+        return { ok: false, error: 'Could not save the contact.', status: 500 }
+      }
+      saved.push(savedProfile(inserted.id, draft))
     }
     return { ok: true, added: saved.length, skipped, empty: false, profiles: saved }
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : 'Could not save profiles.', status: 500 }
+  }
+}
+
+export async function deleteCollectedContact(supabase: SupabaseClient, id: string): Promise<DeleteContactResult> {
+  try {
+    const { data, error: readError } = await supabase.from('contacts').select('id').eq('id', id).maybeSingle()
+    if (readError) return { ok: false, error: explainDbError(readError), status: 500 }
+    if (!data?.id) return { ok: false, error: 'Contact not found.', status: 404 }
+    const { error } = await supabase.from('contacts').delete().eq('id', id)
+    if (error?.code === '23503') return { ok: false, error: 'This contact is already in use.', status: 409 }
+    if (error) return { ok: false, error: explainDbError(error), status: 500 }
+    return { ok: true }
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : 'Could not remove the contact.', status: 500 }
   }
 }

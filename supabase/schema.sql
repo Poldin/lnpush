@@ -135,3 +135,6 @@ alter publication supabase_realtime add table public.clicks;
 
 -- Candidati raccolti dallo script locale. SQL da applicare a mano: supabase/profile_candidates.sql
 -- Non è incluso nell'esecuzione di questo file.
+
+-- Insert e delete su contacts per /collect. SQL da applicare a mano: supabase/collect_direct_to_contacts.sql
+-- Non è incluso nell'esecuzione di questo file.

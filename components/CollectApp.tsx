@@ -24,7 +24,7 @@ import {
   type QueueCompany,
   type QueueProgress,
 } from '../lib/collectQueue'
-import type { ParsedProfile } from '../lib/googlePaste'
+import type { SavedProfile } from '../lib/collectContacts'
 
 const OPENED_KEY = 'lnpush.collect.opened.v1'
 
@@ -40,18 +40,16 @@ type PasteResponse = {
   added?: number
   skipped?: number
   empty?: boolean
-  profiles?: ParsedProfile[]
+  profiles?: SavedProfile[]
   error?: string
 }
 
 export function CollectApp({
   companies: initialCompanies,
   progress: initialProgress,
-  isAdmin,
 }: {
   companies: QueueCompany[]
   progress: QueueProgress
-  isAdmin: boolean
 }) {
   const [companies, setCompanies] = useState(initialCompanies)
   const [progress, setProgress] = useState(initialProgress)
@@ -64,14 +62,16 @@ export function CollectApp({
   const [keyword, setKeyword] = useState('')
   const [queueMessage, setQueueMessage] = useState('')
   const [pasteMessage, setPasteMessage] = useState('')
-  const [saved, setSaved] = useState<ParsedProfile[]>([])
+  const [saved, setSaved] = useState<SavedProfile[]>([])
+  const [savedCompanyId, setSavedCompanyId] = useState<string | null>(null)
+  const [removingIds, setRemovingIds] = useState<string[]>([])
   const [busy, setBusy] = useState(false)
   const [opened, setOpened] = useState<Set<string>>(new Set())
   const [pages, setPages] = useState(DEFAULT_GOOGLE_PAGES)
   const [pagesDraft, setPagesDraft] = useState(String(DEFAULT_GOOGLE_PAGES))
   const [popupBlocked, setPopupBlocked] = useState(false)
-  const sourceQuery = useRef('')
   const pasteChain = useRef(Promise.resolve())
+  const removing = useRef(new Set<string>())
   const pasteRef = useRef<HTMLTextAreaElement>(null)
   const focusPaste = useRef(false)
   const activeRef = useRef<QueueCompany | null>(null)
@@ -149,8 +149,7 @@ export function CollectApp({
     setProgress(data.progress)
   }
 
-  function remember(companyId: string, presetId: string, query: string) {
-    sourceQuery.current = query
+  function remember(companyId: string, presetId: string) {
     setOpened((current) => {
       const next = new Set(current)
       next.add(`${companyId}:${presetId}`)
@@ -253,7 +252,7 @@ export function CollectApp({
       if (nextId) focusPaste.current = true
       setPasteMessage('')
       setSaved([])
-      sourceQuery.current = ''
+      setSavedCompanyId(null)
     } catch (error) {
       setQueueMessage(error instanceof Error ? error.message : 'Could not update the company.')
     } finally {
@@ -273,20 +272,20 @@ export function CollectApp({
     event.currentTarget.focus()
     if (!active) return
     const companyId = active.id
-    const query = sourceQuery.current
     pasteChain.current = pasteChain.current
-      .then(() => sendPaste(companyId, html, text, query))
+      .then(() => sendPaste(companyId, html, text))
       .catch(() => undefined)
   }
 
-  async function sendPaste(companyId: string, html: string, text: string, query: string) {
+  async function sendPaste(companyId: string, html: string, text: string) {
     setPasteMessage('Saving…')
     setSaved([])
+    setSavedCompanyId(companyId)
     try {
       const response = await fetch('/api/collect/paste', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ companyId, html, text, sourceQuery: query }),
+        body: JSON.stringify({ companyId, html, text }),
       })
       const data = (await response.json()) as PasteResponse
       if (!response.ok) {
@@ -297,6 +296,7 @@ export function CollectApp({
       const skipped = data.skipped ?? 0
       setPasteMessage(pasteFeedback(added, skipped, data.empty === true))
       setSaved(data.profiles ?? [])
+      setSavedCompanyId(companyId)
       if (added > 0) {
         setCompanies((current) =>
           current.map((company) => (company.id === companyId ? { ...company, profiles: company.profiles + added } : company)),
@@ -306,6 +306,37 @@ export function CollectApp({
       setPasteMessage('Could not save profiles.')
     } finally {
       focusPasteIfIdle()
+    }
+  }
+
+  async function removeSaved(id: string, companyId: string | null) {
+    if (removing.current.has(id)) return
+    removing.current.add(id)
+    setRemovingIds((current) => [...current, id])
+    try {
+      const response = await fetch('/api/collect/contact', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ action: 'delete', id }),
+      })
+      const data = (await response.json()) as { error?: string }
+      if (!response.ok && response.status !== 404) {
+        setPasteMessage(data.error ?? 'Could not remove the contact.')
+        return
+      }
+      setSaved((current) => current.filter((profile) => profile.id !== id))
+      if (companyId) {
+        setCompanies((current) =>
+          current.map((company) =>
+            company.id === companyId ? { ...company, profiles: Math.max(0, company.profiles - 1) } : company,
+          ),
+        )
+      }
+    } catch {
+      setPasteMessage('Could not remove the contact.')
+    } finally {
+      removing.current.delete(id)
+      setRemovingIds((current) => current.filter((item) => item !== id))
     }
   }
 
@@ -319,7 +350,7 @@ export function CollectApp({
   function openSearch(companyId: string, presetId: string, query: string) {
     const urls = googleSearchWindowHrefs(query, pages)
     const result = openGoogleWindows(urls, (url, target, features) => window.open(url, target, features))
-    remember(companyId, presetId, query)
+    remember(companyId, presetId)
     setPopupBlocked(result.blocked)
   }
 
@@ -349,11 +380,10 @@ export function CollectApp({
       <div className="collect-wrap">
         <nav className="collect-nav" aria-label="Sections">
           <a href="/">List</a>
-          {isAdmin ? <a href="/review">Review</a> : null}
         </nav>
         <p className="kicker">Collect</p>
         <h1 className="plain-title">Google profiles</h1>
-        <p className="review-progress">
+        <p className="collect-progress">
           {progress.pending} pending · {progress.done} done
         </p>
         <div className="collect-layout">
@@ -574,11 +604,20 @@ export function CollectApp({
                 {saved.length > 0 ? (
                   <ul className="collect-saved">
                     {saved.map((profile) => (
-                      <li key={profile.linkedin_url}>
+                      <li key={profile.id}>
                         <a href={profile.linkedin_url} target="_blank" rel="noopener noreferrer">
                           {profile.full_name || 'Unnamed profile'}
                         </a>
                         {profile.headline ? <span>{profile.headline}</span> : null}
+                        <button
+                          className="collect-remove"
+                          type="button"
+                          disabled={removingIds.includes(profile.id)}
+                          aria-label={`Remove ${profile.full_name || 'profile'}`}
+                          onClick={() => void removeSaved(profile.id, savedCompanyId)}
+                        >
+                          Remove
+                        </button>
                       </li>
                     ))}
                   </ul>
