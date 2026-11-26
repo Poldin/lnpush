@@ -3,12 +3,24 @@
 import { useEffect, useRef, useState, type ClipboardEvent, type FormEvent } from 'react'
 
 import {
+  clampGooglePages,
   companyGoogleQuery,
-  googleSearchHref,
+  DEFAULT_GOOGLE_PAGES,
+  googlePagesCaption,
+  googleSearchWindowHrefs,
+  GOOGLE_PAGE_PRESETS,
+  GOOGLE_PAGES_STORAGE_KEY,
   importFeedback,
+  MAX_GOOGLE_PAGES,
+  MIN_GOOGLE_PAGES,
   nextPendingAfter,
+  openGoogleWindows,
+  PASTE_KEYBOARD_HINT,
   pasteFeedback,
+  popupBlockedMessage,
+  readStoredGooglePages,
   SEARCH_PRESETS,
+  shouldRefocusPaste,
   type QueueCompany,
   type QueueProgress,
 } from '../lib/collectQueue'
@@ -55,17 +67,27 @@ export function CollectApp({
   const [saved, setSaved] = useState<ParsedProfile[]>([])
   const [busy, setBusy] = useState(false)
   const [opened, setOpened] = useState<Set<string>>(new Set())
+  const [pages, setPages] = useState(DEFAULT_GOOGLE_PAGES)
+  const [pagesDraft, setPagesDraft] = useState(String(DEFAULT_GOOGLE_PAGES))
+  const [popupBlocked, setPopupBlocked] = useState(false)
   const sourceQuery = useRef('')
   const pasteChain = useRef(Promise.resolve())
   const pasteRef = useRef<HTMLTextAreaElement>(null)
-  const customLinkRef = useRef<HTMLAnchorElement>(null)
   const focusPaste = useRef(false)
+  const activeRef = useRef<QueueCompany | null>(null)
+  const busyRef = useRef(false)
+  const finishRef = useRef<() => void>(() => {})
 
   const active = companies.find((company) => company.id === activeId) ?? null
   const visible = companies.filter((company) => company.status === filter)
+  activeRef.current = active
+  busyRef.current = busy
 
   useEffect(() => {
     setOpened(readOpened())
+    const stored = readPages()
+    setPages(stored)
+    setPagesDraft(String(stored))
   }, [])
 
   useEffect(() => {
@@ -82,6 +104,45 @@ export function CollectApp({
     focusPaste.current = false
     pasteRef.current?.focus()
   }, [activeId])
+
+  useEffect(() => {
+    let windowFocused = document.hasFocus()
+
+    function onFocus() {
+      const returned = !windowFocused
+      windowFocused = true
+      if (returned) focusPasteIfIdle()
+    }
+
+    function onBlur() {
+      windowFocused = false
+    }
+
+    function onVisibility() {
+      if (document.visibilityState === 'visible') focusPasteIfIdle()
+    }
+
+    window.addEventListener('focus', onFocus)
+    window.addEventListener('blur', onBlur)
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      window.removeEventListener('focus', onFocus)
+      window.removeEventListener('blur', onBlur)
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
+  }, [])
+
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if (event.key !== 'Enter' || event.repeat) return
+      if (!(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey) return
+      if (!activeRef.current || busyRef.current) return
+      event.preventDefault()
+      finishRef.current()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   function applyQueue(data: QueueResponse) {
     setCompanies(data.companies)
@@ -180,7 +241,7 @@ export function CollectApp({
   }
 
   async function finish() {
-    if (!active) return
+    if (!active || busy) return
     const nextId = nextPendingAfter(companies, active.id)
     setBusy(true)
     setQueueMessage('')
@@ -200,11 +261,16 @@ export function CollectApp({
     }
   }
 
+  finishRef.current = () => {
+    void finish()
+  }
+
   function onPaste(event: ClipboardEvent<HTMLTextAreaElement>) {
     const html = event.clipboardData.getData('text/html')
     const text = event.clipboardData.getData('text/plain')
     event.preventDefault()
     event.currentTarget.value = ''
+    event.currentTarget.focus()
     if (!active) return
     const companyId = active.id
     const query = sourceQuery.current
@@ -238,17 +304,45 @@ export function CollectApp({
       }
     } catch {
       setPasteMessage('Could not save profiles.')
+    } finally {
+      focusPasteIfIdle()
     }
+  }
+
+  function selectPages(next: number) {
+    const clamped = clampGooglePages(next)
+    setPages(clamped)
+    setPagesDraft(String(clamped))
+    writePages(clamped)
+  }
+
+  function openSearch(companyId: string, presetId: string, query: string) {
+    const urls = googleSearchWindowHrefs(query, pages)
+    const result = openGoogleWindows(urls, (url, target, features) => window.open(url, target, features))
+    remember(companyId, presetId, query)
+    setPopupBlocked(result.blocked)
   }
 
   function openCustom(event: FormEvent) {
     event.preventDefault()
-    if (!keyword.trim()) return
-    customLinkRef.current?.click()
+    if (!active || !keyword.trim()) return
+    openSearch(active.id, `custom:${keyword.trim().toLocaleLowerCase('en')}`, customQuery)
   }
 
   const customQuery = active ? companyGoogleQuery(active.name, keyword) : ''
   const customKey = active ? `${active.id}:custom:${keyword.trim().toLocaleLowerCase('en')}` : ''
+
+  function focusPasteIfIdle() {
+    const paste = pasteRef.current
+    if (!paste || !activeRef.current) return
+    const current = document.activeElement
+    const editable =
+      current instanceof Element
+        ? { tagName: current.tagName, isContentEditable: current instanceof HTMLElement && current.isContentEditable }
+        : null
+    if (!shouldRefocusPaste(editable, current === paste)) return
+    paste.focus()
+  }
 
   return (
     <main className="collect-screen">
@@ -353,23 +447,81 @@ export function CollectApp({
                   {active.profiles} {active.profiles === 1 ? 'profile' : 'profiles'} collected
                   {active.status === 'done' ? ' · done' : ''}
                 </p>
+                <div className="collect-pages">
+                  <label htmlFor="google-pages">Pages</label>
+                  <div className="collect-stepper" role="group" aria-label="Google result pages">
+                    <button
+                      type="button"
+                      aria-label="Fewer pages"
+                      disabled={pages <= MIN_GOOGLE_PAGES}
+                      onClick={() => selectPages(pages - 1)}
+                    >
+                      −
+                    </button>
+                    <input
+                      id="google-pages"
+                      type="number"
+                      inputMode="numeric"
+                      min={MIN_GOOGLE_PAGES}
+                      max={MAX_GOOGLE_PAGES}
+                      value={pagesDraft}
+                      aria-label="Number of Google result pages"
+                      onChange={(event) => {
+                        const raw = event.target.value
+                        setPagesDraft(raw)
+                        if (raw.trim() === '') return
+                        const parsed = Number(raw)
+                        if (!Number.isFinite(parsed)) return
+                        const clamped = clampGooglePages(parsed)
+                        setPages(clamped)
+                        writePages(clamped)
+                        if (clamped !== parsed) setPagesDraft(String(clamped))
+                      }}
+                      onBlur={() => selectPages(pagesDraft.trim() === '' ? pages : Number(pagesDraft))}
+                    />
+                    <button
+                      type="button"
+                      aria-label="More pages"
+                      disabled={pages >= MAX_GOOGLE_PAGES}
+                      onClick={() => selectPages(pages + 1)}
+                    >
+                      +
+                    </button>
+                  </div>
+                  <div className="collect-page-presets" role="group" aria-label="Page shortcuts">
+                    {GOOGLE_PAGE_PRESETS.map((count) => (
+                      <button
+                        key={count}
+                        type="button"
+                        className={pages === count ? 'on' : undefined}
+                        aria-pressed={pages === count}
+                        aria-label={count === 1 ? '1 page' : `${count} pages`}
+                        onClick={() => selectPages(count)}
+                      >
+                        {count}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="collect-hint">{googlePagesCaption(pages)}</p>
+                </div>
                 <div className="collect-search-row">
                   {SEARCH_PRESETS.map((preset) => {
                     const query = companyGoogleQuery(active.name, preset.keywords)
                     const key = `${active.id}:${preset.id}`
                     const marked = opened.has(key)
+                    const pageLabel = pages === 1 ? '1 page' : `${pages} pages`
                     return (
-                      <a
+                      <button
                         key={preset.id}
+                        type="button"
                         className={marked ? 'collect-search on' : 'collect-search'}
-                        href={googleSearchHref(query)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={() => remember(active.id, preset.id, query)}
+                        aria-label={`${preset.label}, open ${pageLabel}`}
+                        onClick={() => openSearch(active.id, preset.id, query)}
                       >
                         {preset.label}
+                        <span className="collect-pages-count">{pageLabel}</span>
                         {marked ? <span className="collect-mark">Opened</span> : null}
-                      </a>
+                      </button>
                     )
                   })}
                 </div>
@@ -383,33 +535,37 @@ export function CollectApp({
                       placeholder="thermal, buyer, Italy…"
                       autoComplete="off"
                     />
-                    <a
-                      ref={customLinkRef}
+                    <button
                       className={keyword.trim() && opened.has(customKey) ? 'collect-search on' : 'collect-search'}
-                      href={keyword.trim() ? googleSearchHref(customQuery) : '#'}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-disabled={keyword.trim() ? undefined : true}
-                      onClick={(event) => {
-                        if (!keyword.trim()) {
-                          event.preventDefault()
-                          return
-                        }
-                        remember(active.id, `custom:${keyword.trim().toLocaleLowerCase('en')}`, customQuery)
-                      }}
+                      type="submit"
+                      disabled={!keyword.trim()}
+                      aria-label={
+                        keyword.trim()
+                          ? `Search, open ${pages === 1 ? '1 page' : `${pages} pages`}`
+                          : 'Search'
+                      }
                     >
                       Search
+                      {keyword.trim() ? (
+                        <span className="collect-pages-count">{pages === 1 ? '1 page' : `${pages} pages`}</span>
+                      ) : null}
                       {keyword.trim() && opened.has(customKey) ? <span className="collect-mark">Opened</span> : null}
-                    </a>
+                    </button>
                   </div>
                 </form>
+                {popupBlocked ? (
+                  <p className="collect-banner" role="status">
+                    {popupBlockedMessage()}
+                  </p>
+                ) : null}
                 <label htmlFor="paste-zone">Paste Google results for {active.name}</label>
+                <p className="collect-hint">{PASTE_KEYBOARD_HINT}</p>
                 <textarea
                   id="paste-zone"
                   ref={pasteRef}
                   className="collect-paste"
                   rows={8}
-                  placeholder="On the Google results page: Ctrl+A, Ctrl+C. Click here and Ctrl+V. The box clears so you can paste the next page."
+                  placeholder="Paste a Google results page. The box clears so you can paste the next one."
                   onPaste={onPaste}
                 />
                 <p className="collect-note" role="status">
@@ -446,6 +602,22 @@ export function CollectApp({
       </div>
     </main>
   )
+}
+
+function readPages(): number {
+  try {
+    return readStoredGooglePages(localStorage.getItem(GOOGLE_PAGES_STORAGE_KEY))
+  } catch {
+    return DEFAULT_GOOGLE_PAGES
+  }
+}
+
+function writePages(pages: number) {
+  try {
+    localStorage.setItem(GOOGLE_PAGES_STORAGE_KEY, String(pages))
+  } catch {
+    // The page count falls back to the default on the next visit.
+  }
 }
 
 function readOpened(): Set<string> {
