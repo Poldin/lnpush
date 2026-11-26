@@ -6,6 +6,15 @@ const PAGE = 1000
 
 export function explainDbError(error: { message?: string; code?: string }): string {
   const message = error.message ?? ''
+  if (/collector_companies/.test(message)) {
+    return 'Apply supabase/collector_companies.sql in the Supabase SQL editor.'
+  }
+  if (
+    /profile_candidates/.test(message) &&
+    (error.code === '42501' || /permission denied/i.test(message))
+  ) {
+    return 'Apply supabase/collector_companies.sql in the Supabase SQL editor.'
+  }
   if (error.code === '42P01' || /profile_candidates|collector_runs/.test(message)) {
     return 'Apply supabase/profile_candidates.sql in the Supabase SQL editor.'
   }

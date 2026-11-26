@@ -32,9 +32,14 @@ export default async function ReviewPage() {
           <p className="kicker">Review</p>
           <h1 className="plain-title">Candidates</h1>
           <p className="lede">{loaded.error}</p>
-          <a className="review-back" href="/">
-            Back to the list
-          </a>
+          <nav className="review-nav" aria-label="Sections">
+            <a className="review-back" href="/">
+              Back to the list
+            </a>
+            <a className="review-back" href="/collect">
+              Collect
+            </a>
+          </nav>
         </div>
       </main>
     )
