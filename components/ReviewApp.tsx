@@ -148,9 +148,14 @@ export function ReviewApp({
   return (
     <main className="review-screen">
       <div className="review-wrap">
-        <a className="review-back" href="/">
-          Back to the list
-        </a>
+        <nav className="review-nav" aria-label="Sections">
+          <a className="review-back" href="/">
+            Back to the list
+          </a>
+          <a className="review-back" href="/collect">
+            Collect
+          </a>
+        </nav>
         <p className="kicker">Review</p>
         <h1 className="plain-title">Candidates</h1>
         <p className="review-count">{rows.length} pending</p>

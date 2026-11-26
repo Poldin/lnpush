@@ -1363,6 +1363,12 @@ input:focus-visible,
   color: #f4f4f5;
 }
 
+.review-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
 .review-back {
   display: inline-block;
   margin-bottom: 12px;
@@ -1462,4 +1468,281 @@ input:focus-visible,
   margin-top: 10px;
   color: #fff;
   font-weight: 700;
+}
+
+.collect-screen {
+  min-height: 100dvh;
+  background: #0e0e10;
+  color: #f4f4f5;
+  color-scheme: dark;
+}
+
+.collect-wrap {
+  width: min(1100px, 100%);
+  margin: 0 auto;
+  padding: calc(18px + env(safe-area-inset-top, 0px)) 16px calc(32px + env(safe-area-inset-bottom, 0px));
+}
+
+.collect-screen .plain-title,
+.collect-screen .kicker,
+.collect-screen .lede,
+.collect-screen .review-progress,
+.collect-nav a,
+.collect-screen .review-back {
+  color: #f4f4f5;
+}
+
+.collect-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.collect-nav a {
+  font-weight: 700;
+}
+
+.collect-layout {
+  display: grid;
+  grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
+  gap: 22px;
+  align-items: start;
+  margin-top: 18px;
+}
+
+.collect-side,
+.collect-work {
+  min-width: 0;
+}
+
+.collect-screen label {
+  display: block;
+  margin-top: 12px;
+  font-weight: 700;
+}
+
+.collect-screen textarea,
+.collect-screen input {
+  width: 100%;
+  margin-top: 8px;
+  padding: 12px 14px;
+  border: 1px solid #3a3a40;
+  border-radius: 14px;
+  background: #16161a;
+  color: #f4f4f5;
+  font: inherit;
+  font-size: 16px;
+}
+
+.collect-screen .collect-paste {
+  min-height: 220px;
+  border-style: dashed;
+  border-color: #8a8a93;
+  resize: vertical;
+}
+
+.collect-screen .ghost,
+.collect-mini,
+.collect-filter,
+.collect-search {
+  font: inherit;
+  cursor: pointer;
+}
+
+.collect-screen .ghost,
+.collect-mini {
+  min-height: 44px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  border: 1px solid #3a3a40;
+  border-radius: 12px;
+  background: transparent;
+  color: #fff;
+  font-weight: 700;
+}
+
+.collect-screen .primary {
+  width: 100%;
+  justify-content: center;
+  text-align: center;
+  background: #fff;
+  color: #111;
+  border-color: #fff;
+}
+
+.collect-screen .primary:disabled,
+.collect-screen .ghost:disabled,
+.collect-mini:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.collect-add {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.collect-add input {
+  flex: 1;
+  min-width: 0;
+}
+
+.collect-add .ghost,
+.collect-add .collect-search {
+  flex: 0 0 auto;
+  margin-top: 8px;
+}
+
+.collect-note {
+  min-height: 1.45em;
+  margin: 8px 0 0;
+}
+
+.collect-switch {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.collect-filter {
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid #3a3a40;
+  border-radius: 999px;
+  background: transparent;
+  color: #fff;
+  font-weight: 700;
+}
+
+.collect-filter.on,
+.collect-pick.on,
+.collect-search.on {
+  background: #fff;
+  color: #111;
+  border-color: #fff;
+}
+
+.collect-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.collect-row {
+  display: flex;
+  gap: 6px;
+  align-items: stretch;
+}
+
+.collect-pick {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  min-height: 48px;
+  padding: 8px 12px;
+  border: 1px solid #3a3a40;
+  border-radius: 14px;
+  background: transparent;
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.collect-pick-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.collect-count {
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.collect-mini {
+  margin-top: 0;
+}
+
+.collect-active-name {
+  margin: 4px 0 0;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 40px;
+  line-height: 1.05;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.collect-search-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.collect-search {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid #3a3a40;
+  border-radius: 999px;
+  color: #fff;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.collect-mark {
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.collect-saved {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.collect-saved li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.collect-saved a {
+  color: #fff;
+  font-weight: 700;
+}
+
+.collect-finish {
+  margin-top: 16px;
+}
+
+.collect-screen :focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 2px;
+}
+
+@media (max-width: 800px) {
+  .collect-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .collect-active-name {
+    font-size: 32px;
+  }
 }

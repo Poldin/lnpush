@@ -356,6 +356,9 @@ function confirmOpen(card: CardView) {
           Hi <strong>{memberName}</strong>
         </p>
         <div className="toolbar-actions">
+          <a className="icon-link" href="/collect" aria-label="Collect profiles">
+            <CollectIcon />
+          </a>
           {isAdmin ? (
             <a className="icon-link" href="/review" aria-label="Review candidates">
               <ReviewIcon />
@@ -735,6 +738,17 @@ function SeeLinkFace({ label }: { label: string }) {
       <LinkedInMark />
       <span aria-hidden="true">↗</span>
     </span>
+  )
+}
+
+function CollectIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        fill="currentColor"
+        d="M10.5 3a7.5 7.5 0 0 1 5.96 12.05l4.24 4.25-1.41 1.41-4.24-4.24A7.5 7.5 0 1 1 10.5 3zm0 2a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11z"
+      />
+    </svg>
   )
 }
 
