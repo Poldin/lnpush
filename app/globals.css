@@ -1688,6 +1688,104 @@ input:focus-visible,
   margin-top: 14px;
 }
 
+.collect-pages {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.collect-pages label {
+  margin-top: 0;
+}
+
+.collect-stepper {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #3a3a40;
+  border-radius: 999px;
+}
+
+.collect-stepper button,
+.collect-page-presets button {
+  border: 0;
+  background: transparent;
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.collect-stepper button {
+  width: 36px;
+  min-height: 36px;
+}
+
+.collect-stepper button:disabled,
+.collect-search:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.collect-screen .collect-stepper input {
+  width: 52px;
+  margin: 0;
+  padding: 6px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.collect-stepper input[type='number']::-webkit-outer-spin-button,
+.collect-stepper input[type='number']::-webkit-inner-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
+}
+
+.collect-page-presets {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.collect-page-presets button {
+  min-width: 36px;
+  min-height: 36px;
+  padding: 4px 8px;
+  border: 1px solid #3a3a40;
+  border-radius: 999px;
+}
+
+.collect-page-presets button.on {
+  background: #fff;
+  color: #111;
+  border-color: #fff;
+}
+
+.collect-pages .collect-hint {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+.collect-hint {
+  margin: 6px 0 0;
+  color: #a1a1aa;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.collect-banner {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #2a2416;
+  color: #f6e7c1;
+}
+
 .collect-search {
   display: inline-flex;
   align-items: center;
@@ -1696,9 +1794,16 @@ input:focus-visible,
   padding: 8px 12px;
   border: 1px solid #3a3a40;
   border-radius: 999px;
+  background: transparent;
   color: #fff;
   font-weight: 700;
   text-decoration: none;
+}
+
+.collect-pages-count {
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  opacity: 0.75;
 }
 
 .collect-mark {

@@ -1,6 +1,26 @@
 import { describe, expect, it } from 'vitest'
 
-import { companyGoogleQuery, googleSearchHref, importFeedback, nextPendingAfter, parseCompanyLines, pasteFeedback, SEARCH_PRESETS } from '../lib/collectQueue'
+import {
+  clampGooglePages,
+  companyGoogleQuery,
+  DEFAULT_GOOGLE_PAGES,
+  googlePagesCaption,
+  googleResultStart,
+  googleSearchHref,
+  googleSearchWindowHrefs,
+  googleWindowSizeFeatures,
+  GOOGLE_WINDOW_FEATURES,
+  importFeedback,
+  MAX_GOOGLE_PAGES,
+  nextPendingAfter,
+  openGoogleWindows,
+  parseCompanyLines,
+  pasteFeedback,
+  popupBlockedMessage,
+  readStoredGooglePages,
+  SEARCH_PRESETS,
+  shouldRefocusPaste,
+} from '../lib/collectQueue'
 import { linkedInProfileFromHref, parseGoogleLinkedInPaste } from '../lib/googlePaste'
 
 const serp = `
@@ -143,8 +163,92 @@ describe('collector queue helpers', () => {
     const href = new URL(googleSearchHref(query))
     expect(href.hostname).toBe('www.google.com')
     expect(href.searchParams.get('q')).toBe(query)
+    expect(href.searchParams.get('start')).toBe('0')
+    expect(href.searchParams.get('hl')).toBe('en')
     expect(pasteFeedback(9, 1, false)).toBe('Added 9 new profiles · 1 duplicate skipped')
     expect(pasteFeedback(0, 0, true)).toBe('No LinkedIn profiles found in that paste.')
     expect(importFeedback(1, 2)).toBe('Added 1 company · 2 duplicates skipped')
+  })
+})
+
+describe('Google result windows', () => {
+  it('paginates with start=0, 10, 20, 30, and 40 and opens the highest page first', () => {
+    expect(googleResultStart(1)).toBe(0)
+    expect(googleResultStart(2)).toBe(10)
+    expect(googleResultStart(3)).toBe(20)
+    expect(googleResultStart(4)).toBe(30)
+    expect(googleResultStart(5)).toBe(40)
+    expect(googleResultStart(10)).toBe(90)
+
+    const query = 'site:linkedin.com/in "Acme"'
+    const starts = googleSearchWindowHrefs(query, 5).map((href) => new URL(href).searchParams.get('start'))
+    expect(starts).toEqual(['40', '30', '20', '10', '0'])
+    expect(googleSearchWindowHrefs(query, 1).map((href) => new URL(href).searchParams.get('start'))).toEqual(['0'])
+    expect(googleSearchWindowHrefs(query, 3).map((href) => new URL(href).searchParams.get('start'))).toEqual(['20', '10', '0'])
+    expect(googleSearchWindowHrefs(query, 10).map((href) => new URL(href).searchParams.get('start'))?.[0]).toBe('90')
+
+    for (const href of googleSearchWindowHrefs(query, 5)) {
+      const url = new URL(href)
+      expect(url.searchParams.get('q')).toBe(query)
+      expect(url.searchParams.get('hl')).toBe('en')
+    }
+  })
+
+  it('accepts any page count from 1 to 10 and defaults to 5', () => {
+    expect(DEFAULT_GOOGLE_PAGES).toBe(5)
+    expect(MAX_GOOGLE_PAGES).toBe(10)
+    expect(clampGooglePages(5)).toBe(5)
+    expect(clampGooglePages(1)).toBe(1)
+    expect(clampGooglePages(10)).toBe(10)
+    expect(clampGooglePages(0)).toBe(1)
+    expect(clampGooglePages(11)).toBe(10)
+    expect(clampGooglePages(4.4)).toBe(4)
+    expect(clampGooglePages('8')).toBe(8)
+    expect(clampGooglePages('nope')).toBe(5)
+    expect(clampGooglePages(undefined)).toBe(5)
+    expect(readStoredGooglePages(null)).toBe(5)
+    expect(readStoredGooglePages('')).toBe(5)
+    expect(readStoredGooglePages('7')).toBe(7)
+    expect(readStoredGooglePages('0')).toBe(1)
+    expect(googlePagesCaption(1)).toBe('Opens 1 window.')
+    expect(googlePagesCaption(5)).toBe('Opens 5 windows, highest page first so page 1 stays on top.')
+  })
+
+  it('opens sized windows and reports a popup block when an extra window returns null', () => {
+    expect(GOOGLE_WINDOW_FEATURES).toBe('width=1200,height=900,left=80,top=60,noopener,noreferrer')
+    expect(googleWindowSizeFeatures()).toBe('width=1200,height=900,left=80,top=60')
+
+    const urls = googleSearchWindowHrefs('site:linkedin.com/in "Acme"', 5)
+    const calls: Array<{ url: string; target: string; features: string }> = []
+    const handles = urls.map(() => ({ opener: {} as unknown }))
+    const opened = openGoogleWindows(urls, (url, target, features) => {
+      calls.push({ url, target, features })
+      return handles[calls.length - 1] ?? null
+    })
+    expect(opened).toEqual({ opened: 5, blocked: false })
+    expect(calls.map((call) => call.target)).toEqual(['_blank', '_blank', '_blank', '_blank', '_blank'])
+    expect(calls.map((call) => call.features)).toEqual(Array(5).fill(googleWindowSizeFeatures()))
+    expect(calls.map((call) => new URL(call.url).searchParams.get('start'))).toEqual(['40', '30', '20', '10', '0'])
+    expect(handles.every((handle) => handle.opener === null)).toBe(true)
+
+    const blocked = openGoogleWindows(urls, (url, _target, _features) => {
+      const start = new URL(url).searchParams.get('start')
+      if (start === '40') return { opener: null }
+      return null
+    })
+    expect(blocked).toEqual({ opened: 1, blocked: true })
+    expect(openGoogleWindows([urls[4]!], () => null)).toEqual({ opened: 0, blocked: false })
+    expect(popupBlockedMessage()).toContain('address bar')
+    expect(popupBlockedMessage()).toContain('pop-ups')
+  })
+
+  it('leaves the paste box focused unless another field is being edited', () => {
+    expect(shouldRefocusPaste(null)).toBe(true)
+    expect(shouldRefocusPaste({ tagName: 'textarea' }, true)).toBe(true)
+    expect(shouldRefocusPaste({ tagName: 'TEXTAREA' })).toBe(false)
+    expect(shouldRefocusPaste({ tagName: 'input' })).toBe(false)
+    expect(shouldRefocusPaste({ tagName: 'SELECT' })).toBe(false)
+    expect(shouldRefocusPaste({ tagName: 'div', isContentEditable: true })).toBe(false)
+    expect(shouldRefocusPaste({ tagName: 'BUTTON' })).toBe(true)
   })
 })
