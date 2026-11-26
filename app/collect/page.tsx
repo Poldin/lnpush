@@ -2,7 +2,6 @@ import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 
 import { CollectApp } from '../../components/CollectApp'
-import { isCollectorAdmin } from '../../lib/admin'
 import { loadCollectorQueue } from '../../lib/collectCompanies'
 import { createServerSupabase } from '../../lib/supabase/server'
 import { linkMember, loadActiveTeam, memberForUser } from '../../lib/supabase/team'
@@ -41,7 +40,7 @@ export default async function CollectPage() {
     return (
       <main className="collect-screen">
         <div className="collect-wrap">
-          <a className="review-back" href="/">
+          <a className="collect-back" href="/">
             List
           </a>
           <p className="kicker">Collect</p>
@@ -52,11 +51,5 @@ export default async function CollectPage() {
     )
   }
 
-  return (
-    <CollectApp
-      companies={loaded.companies}
-      progress={loaded.progress}
-      isAdmin={isCollectorAdmin(member, data.user)}
-    />
-  )
+  return <CollectApp companies={loaded.companies} progress={loaded.progress} />
 }

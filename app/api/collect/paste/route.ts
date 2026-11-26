@@ -40,7 +40,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Paste is too large.' }, { status: 400 })
   }
 
-  const saved = await savePastedProfiles(member.supabase, record.companyId, html, text, sourceQuery)
+  const saved = await savePastedProfiles(member.supabase, record.companyId, html, text)
   if (!saved.ok) return NextResponse.json({ error: saved.error }, { status: saved.status })
   return NextResponse.json({
     ok: true,

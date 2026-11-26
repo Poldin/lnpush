@@ -32,7 +32,6 @@ export function TodayApp({
   isoDate,
   initialTab,
   initialCompanies,
-  isAdmin,
 }: {
   memberId: string
   memberName: string
@@ -40,7 +39,6 @@ export function TodayApp({
   isoDate: string
   initialTab: AppTab
   initialCompanies: string[]
-  isAdmin: boolean
 }) {
   const router = useRouter()
   const initialFilter = readCompanyFilter(initialCompanies)
@@ -359,11 +357,6 @@ function confirmOpen(card: CardView) {
           <a className="icon-link" href="/collect" aria-label="Collect profiles">
             <CollectIcon />
           </a>
-          {isAdmin ? (
-            <a className="icon-link" href="/review" aria-label="Review candidates">
-              <ReviewIcon />
-            </a>
-          ) : null}
           <form action="/api/logout" method="post">
             <button className="linkish" type="submit">
               Sign out
@@ -747,17 +740,6 @@ function CollectIcon() {
       <path
         fill="currentColor"
         d="M10.5 3a7.5 7.5 0 0 1 5.96 12.05l4.24 4.25-1.41 1.41-4.24-4.24A7.5 7.5 0 1 1 10.5 3zm0 2a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11z"
-      />
-    </svg>
-  )
-}
-
-function ReviewIcon() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        fill="currentColor"
-        d="M7 3h10a2 2 0 0 1 2 2v16l-7-3.2L5 21V5a2 2 0 0 1 2-2zm1.2 6.2 2.1 2.1 4.6-4.6 1.2 1.2-5.8 5.8-3.3-3.3 1.2-1.2z"
       />
     </svg>
   )

@@ -1,14 +1,16 @@
 # Raccolta candidati LinkedIn
 
-Lo script sul PC di Paolo cerca su Google, piano. Il server non chiama Google: riceve i risultati, tiene solo i profili `linkedin.com/in/…`, e li mette in coda per la revisione. Brave è un provider opzionale, a pagamento, e non serve per il percorso normale.
+Lo script sul PC di Paolo cerca su Google, piano. Il server non chiama Google: riceve i risultati e tiene solo i profili `linkedin.com/in/…`. Brave è un provider opzionale, a pagamento, e non serve per il percorso normale.
 
-Non c’è un cron. La pagina `/review` è solo per Paolo (`oloapiccoli@gmail.com`, oppure il membro del team di nome Paolo). Gli altri ricevono 404.
+Non c’è un cron. Su `/collect` i profili incollati finiscono direttamente in `contacts`. `/review` reindirizza a `/collect`.
 
 ## SQL da applicare
 
-Nel SQL editor di Supabase, una volta, incolla ed esegui `supabase/profile_candidates.sql`.
+Nel SQL editor di Supabase, una volta, incolla ed esegui `supabase/profile_candidates.sql` se lo script locale deve ancora scrivere `profile_candidates`.
 
-Crea `public.profile_candidates` e `public.collector_runs`. Il service role scrive. Paolo può leggere e aggiornare lo stato. L’approvazione inserisce una riga in `contacts` (nome, headline come ruolo, azienda, URL).
+Crea `public.profile_candidates` e `public.collector_runs`. Il service role scrive.
+
+Per `/collect`, incolla ed esegui anche `supabase/collect_direct_to_contacts.sql`. I membri attivi del team possono inserire e cancellare righe in `contacts`. Senza quel file il salvataggio dalla sessione firmata fallisce.
 
 Le aziende da cercare sono i valori distinti di `contacts.company` con `active = true`. Non esiste una tabella aziende.
 
@@ -107,7 +109,7 @@ L’URL salvato è `https://www.linkedin.com/in/<slug>` in minuscolo, senza quer
 
 ## Brave, solo se la chiave c’è
 
-Senza `BRAVE_SEARCH_API_KEY` questi endpoint rispondono 503 e in `/review` al posto di **Collect all** c’è la scritta “Collected via local script”. Con la chiave, il pulsante chiama il run a chunk da circa 250 secondi (`maxDuration` 300) finché non restano aziende, e ogni gruppo ha **Re-collect**.
+Senza `BRAVE_SEARCH_API_KEY` questi endpoint rispondono 503. Con la chiave, il run va a chunk da circa 250 secondi (`maxDuration` 300) finché non restano aziende.
 
 Tre chiamate Brave per azienda (`count=20`, `offset` 0, 1 e 2), al massimo 60 profili `/in/`, una richiesta al secondo. `save` di default è `false` (non scrive). Manda un solo modo tra `company`, `companies` e `next`.
 
@@ -140,6 +142,8 @@ curl -sS -H "Authorization: Bearer $CRON_SECRET" \
   "https://lnpush.vercel.app/api/collect/preview?company=Acme&limit=60&save=true"
 ```
 
-## Revisione
+## Raccolta in pagina
 
-In testata, solo per l’admin, c’è un’icona verso `/review`. Per ogni candidato: nome, headline, snippet, link, casella. **Approve selected** / **Reject selected**, e per azienda **Approve all** / **Reject all**. Approvare crea il contatto e segna `approved`. Il contatore in alto è il totale ancora `pending`.
+Su `/collect` un membro del team incolla i risultati di Google. I profili nuovi vanno in `contacts`: `company` è l’azienda attiva, `full_name` il nome, `role` l’headline se c’è, `linkedin_url` normalizzato (`https://www.linkedin.com/in/<slug>`), `active` vero. Un URL già presente in `contacts` non viene reinserito. `/collect` non scrive `profile_candidates`.
+
+Il numero accanto a ogni azienda conta i contatti attivi di quell’azienda. Sulla lista appena aggiunta, **Remove** cancella quel contatto.
